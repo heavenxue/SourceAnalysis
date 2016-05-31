@@ -1,4 +1,6 @@
 ### canvas源码解析
+#### 目录
+
 ## 简介
 
   Android中使用图形处理引擎，2D部分是android SDK内部自己提供，3D部分是用Open GL ES 1.0。今天我们主要要了解的是2D相关的，
@@ -19,7 +21,7 @@ Canvas c =new Canvas(Bitmap.createBitmap(100,100,Bitmap.Config.ARGB_88880));
 既然一个view的绘制主要是这三步，那一定有一个开始的地方啊，就像一个类是从main函数执行一样，对于view的绘制开始，这里先给出结论，后面会分析原因，具体结论如下：
 整个view的绘制流程是在ViewRootImpl类的performTraversals()方法（这个方法巨长）开始的，该函数做的执行过程主要是根据之前设置的状态，判断是否重新计算视图大小（measure）、
 是否重新放置视图的位置（layout）、是否重绘(draw)、其核心就是通过判断来选择顺序执行这三个方法中的哪个，如下：
-    
+    ``` java    
     private void performTraversals() {
          //最外层的根视图的withMeasureSpec和heightMeasureSpec由来
          //lp.width和lp.height在创建ViewGroup实例时等于MATCH_PARENT
@@ -34,7 +36,6 @@ Canvas c =new Canvas(Bitmap.createBitmap(100,100,Bitmap.Config.ARGB_88880));
          mView.draw(canvas);
          ...
     }
-    
     /**
      * Figures out the measure spec for the root view in a window based on it's
      * layout params.
@@ -66,6 +67,7 @@ Canvas c =new Canvas(Bitmap.createBitmap(100,100,Bitmap.Config.ARGB_88880));
         }
         return measureSpec;
     }
+    ```
   好，既然这样，我们就从这里入手。
 
 #### draw源码解析
