@@ -82,115 +82,120 @@ view递归draw流程图如下:<br/>
 ![github](https://github.com/heavenxue/SourceAnalysis/raw/master/pic/2.png "github")
 由于ViewGroup没有重写View的draw方法，所以下面直接从View的draw方法开始分析
 
-    public void draw(Canvas canvas) {
-                ......
-                /*
-                 * Draw traversal performs several drawing steps which must be executed
-                 * in the appropriate order:
-                 *
-                 *      1. Draw the background
-                 *      2. If necessary, save the canvas' layers to prepare for fading
-                 *      3. Draw view's content
-                 *      4. Draw children
-                 *      5. If necessary, draw the fading edges and restore layers
-                 *      6. Draw decorations (scrollbars for instance)
-                 */
-                // Step 1, draw the background, if needed
-                int saveCount;if (!dirtyOpaque) {
-                  drawBackground(canvas);
-                }
-                // skip step 2 & 5 if possible (common case)
-                ......
-                // Step 2, save the canvas' layers
-                if (drawTop) {
-                   canvas.saveLayer(left, top, right, top + length, null, flags);
-                }
-                ......
-                // Step 3, draw the content
-                if (!dirtyOpaque) onDraw(canvas);
-                // Step 4, draw the children
-                dispatchDraw(canvas);
-                ......
-                if (drawTop) {
-                    matrix.setScale(1, fadeHeight * topFadeStrength);
-                    matrix.postTranslate(left, top);
-                    fade.setLocalMatrix(matrix);
-                    p.setShader(fade);
-                    canvas.drawRect(left, top, right, top + length, p);
-                }
-                ......
-                // Step 6, draw decorations (foreground, scrollbars)
-                onDrawForeground(canvas);
-            }
-
+``` java
+public void draw(Canvas canvas) {
+    ......
+    /*
+     * Draw traversal performs several drawing steps which must be executed
+     * in the appropriate order:
+     *
+     *      1. Draw the background
+     *      2. If necessary, save the canvas' layers to prepare for fading
+     *      3. Draw view's content
+     *      4. Draw children
+     *      5. If necessary, draw the fading edges and restore layers
+     *      6. Draw decorations (scrollbars for instance)
+     */
+    // Step 1, draw the background, if needed
+    int saveCount;if (!dirtyOpaque) {
+      drawBackground(canvas);
+    }
+    // skip step 2 & 5 if possible (common case)
+    ......
+    // Step 2, save the canvas' layers
+    if (drawTop) {
+       canvas.saveLayer(left, top, right, top + length, null, flags);
+    }
+    ......
+    // Step 3, draw the content
+    if (!dirtyOpaque) onDraw(canvas);
+    // Step 4, draw the children
+    dispatchDraw(canvas);
+    ......
+    if (drawTop) {
+        matrix.setScale(1, fadeHeight * topFadeStrength);
+        matrix.postTranslate(left, top);
+        fade.setLocalMatrix(matrix);
+        p.setShader(fade);
+        canvas.drawRect(left, top, right, top + length, p);
+    }
+    ......
+    // Step 6, draw decorations (foreground, scrollbars)
+    onDrawForeground(canvas);
+}
+```
 看整个view的draw方法很复杂，但是注释很详细，从注释可以看出整个draw过程分6步。源码注释说（skip step 2 & 5 if possible (common case) ）第2步和第5步可以跳过，所以我们重点来看剩余4步，如下：
 ##### 第一步，对view的背景进行绘制
 可以看见，draw方法通过调用drawBackground(canvas)实现了背景绘制，看下源码：
-
-    private void drawBackground(Canvas canvas) {
-            //获取xml中通过android:background属性或代码中setBackgroundColor(),setBackgroundResources()等方法进行赋值的背景drawable
-            final Drawable background = mBackground;
-            ......
-            //根据layout过程确定的View位置来设置背景的绘制区域
-            if (mBackgroundSizeChanged && mBackground != null) {
-               mBackground.setBounds(0, 0,  mRight - mLeft, mBottom - mTop);
-               mBackgroundSizeChanged = false;
-               rebuildOutline();
-            }
-            ......
-            //调用Drawable的draw()方法来完成背景的绘制
-            background.draw(canvas);
+``` java
+private void drawBackground(Canvas canvas) {
+        //获取xml中通过android:background属性或代码中setBackgroundColor(),setBackgroundResources()等方法进行赋值的背景drawable
+        final Drawable background = mBackground;
+        ......
+        //根据layout过程确定的View位置来设置背景的绘制区域
+        if (mBackgroundSizeChanged && mBackground != null) {
+           mBackground.setBounds(0, 0,  mRight - mLeft, mBottom - mTop);
+           mBackgroundSizeChanged = false;
+           rebuildOutline();
         }
+        ......
+        //调用Drawable的draw()方法来完成背景的绘制
+        background.draw(canvas);
+    }
+```
 
 ##### 第三步，对view的内容绘制
 可以看到，这里去调用了View的onDraw()方法，所以我们看下view的onDraw()方法（ViewGroup没有重写这个方法），如下：
-
-    /**
-     * Implement this to do your drawing.
-     *
-     * @param canvas the canvas on which the background will be drawn
-     */
-    protected void onDraw(Canvas canvas) {
-    }
+``` java
+/**
+ * Implement this to do your drawing.
+ *
+ * @param canvas the canvas on which the background will be drawn
+ */
+protected void onDraw(Canvas canvas) {
+}
+```
 
 可以看到，是一个空方法，因为每个view的内容部分是各不相同的，所以要由子类去实现具体的逻辑
 ##### 第四步，对当前的view的所有子view进行绘制，如果当前view没有子view就不需要绘制
 我们来看下view的draw方法中的dispatchDraw(canvas)方法源码，可以看到：
+``` java
+/**
+ * Called by draw to draw the child views. This may be overridden
+ * by derived classes to gain control just before its children are drawn
+ * (but after its own view has been drawn).
+ * @param canvas the canvas on which to draw the view
+ */
+protected void dispatchDraw(Canvas canvas) {
 
-    /**
-     * Called by draw to draw the child views. This may be overridden
-     * by derived classes to gain control just before its children are drawn
-     * (but after its own view has been drawn).
-     * @param canvas the canvas on which to draw the view
-     */
-    protected void dispatchDraw(Canvas canvas) {
-    
-    }
-
+}
+```
 view的dispatchDraw方法也是一个空方法，而且注释说明了如果view包含子类需要重写它，所以我们有必要看下ViewGroup的dispatchDraw()方法源码（这也就是说刚刚说的当前View的所有子view进行绘制，如果当前的View没有子view就不需要进行绘制的原因，因为如果是View调用该方法是空的，而viewGroup才实现），如下：
 
-    @Override
-    protected void dispatchDraw(Canvas canvas) {
-        ......
-        final int childrenCount = mChildrenCount;
-        final View[] children = mChildren;
-        ......
-        for(int i = 0;i < childrenCount; i ++){
-             ......
-             if ((child.mViewFlags & VISIBILITY_MASK) == VISIBLE || child.getAnimation() != null) {
-                 more |= drawChild(canvas, child, drawingTime);
-             }
-            }
-        ......
-        //Draw any disappearing views that have animations
-        if(DisappearingChildren != null){
-        ......
-        for (int i = disappearingCount; i >= 0; i--) {
-           final View child = disappearingChildren.get(i);
-           more |= drawChild(canvas, child, drawingTime);
+``` java
+@Override
+protected void dispatchDraw(Canvas canvas) {
+    ......
+    final int childrenCount = mChildrenCount;
+    final View[] children = mChildren;
+    ......
+    for(int i = 0;i < childrenCount; i ++){
+         ......
+         if ((child.mViewFlags & VISIBILITY_MASK) == VISIBLE || child.getAnimation() != null) {
+             more |= drawChild(canvas, child, drawingTime);
+         }
         }
-        ......
+    ......
+    //Draw any disappearing views that have animations
+    if(DisappearingChildren != null){
+    ......
+    for (int i = disappearingCount; i >= 0; i--) {
+       final View child = disappearingChildren.get(i);
+       more |= drawChild(canvas, child, drawingTime);
     }
+    ......
+}
+```
 
 可以看出，ViewGroup确实重写了View的dispatchDraw()方法，该方法内部会遍历每个子View,然后调用drawChild()方法，我们可以看下ViewGroup的drawChild方法，如下：
 
@@ -201,20 +206,20 @@ view的dispatchDraw方法也是一个空方法，而且注释说明了如果view
 可以看出，drawChild方法调用了子view的draw方法，所以说viewGroup类已经为我们重写了dispatchDraw()功能实现，我们一般不需要重写这个方法，但可以重载父类函数实现具体功能。
 ##### 第六步，对view的滚动条进行绘制
  可以看到，这里去调用了一下view的onDrawScrollBars()方法，所以看下它的源码如下：
- 
-    /**
-     * <p>Request the drawing of the horizontal and the vertical scrollbar. The
-     * scrollbars are painted only if they have been awakened first.</p>
-     *
-     * @param canvas the canvas on which to draw the scrollbars
-     *
-     * @see #awakenScrollBars(int)
-     */
-    protected final void onDrawScrollBars(Canvas canvas) {
-        //绘制ScrollBars分析不是我们这篇的重点，暂时不做分析
-        ......
-    }
-
+``` java
+/**
+ * <p>Request the drawing of the horizontal and the vertical scrollbar. The
+ * scrollbars are painted only if they have been awakened first.</p>
+ *
+ * @param canvas the canvas on which to draw the scrollbars
+ *
+ * @see #awakenScrollBars(int)
+ */
+protected final void onDrawScrollBars(Canvas canvas) {
+    //绘制ScrollBars分析不是我们这篇的重点，暂时不做分析
+    ......
+}
+``` 
 可以看见其实任何一个View都是有（水平垂直）滚动条的，只是一般情况下都不显示而已，到此，View的draw绘制部分已经分析完毕。
 
 ### draw原理总结
@@ -232,281 +237,282 @@ view的dispatchDraw方法也是一个空方法，而且注释说明了如果view
 好了，开始canvas之旅了，因此我们首先从ViewGroup的dispatchDraw开始入手，这里要传入一个Canvas，这个Canvas是由ViewRootImpl.java传入，此时的Canvas是一个画布
 而dispatchDraw方法里面会调用了drawChild(canvas, transientChild, drawingTime);这个方法里可以找到child.draw(canvas, this, drawingTime);
 继续看，指向了view的draw方法，这个函数不同于draw(Canvas canvas)函数，后者是view绘制开始的地方，下面是源码：
+``` java
+boolean draw(Canvas canvas, ViewGroup parent, long drawingTime) {
+    final boolean hardwareAcceleratedCanvas = canvas.isHardwareAccelerated();
+    /* If an attached view draws to a HW canvas, it may use its RenderNode + DisplayList.
+     *
+     * If a view is dettached, its DisplayList shouldn't exist. If the canvas isn't
+     * HW accelerated, it can't handle drawing RenderNodes.
+     */
+    boolean drawingWithRenderNode = mAttachInfo != null
+            && mAttachInfo.mHardwareAccelerated
+            && hardwareAcceleratedCanvas;
 
-    boolean draw(Canvas canvas, ViewGroup parent, long drawingTime) {
-        final boolean hardwareAcceleratedCanvas = canvas.isHardwareAccelerated();
-        /* If an attached view draws to a HW canvas, it may use its RenderNode + DisplayList.
-         *
-         * If a view is dettached, its DisplayList shouldn't exist. If the canvas isn't
-         * HW accelerated, it can't handle drawing RenderNodes.
-         */
-        boolean drawingWithRenderNode = mAttachInfo != null
-                && mAttachInfo.mHardwareAccelerated
-                && hardwareAcceleratedCanvas;
-    
-        boolean more = false;
-        final boolean childHasIdentityMatrix = hasIdentityMatrix();
-        final int parentFlags = parent.mGroupFlags;
-    
-        if ((parentFlags & ViewGroup.FLAG_CLEAR_TRANSFORMATION) != 0) {
-            parent.getChildTransformation().clear();
-            parent.mGroupFlags &= ~ViewGroup.FLAG_CLEAR_TRANSFORMATION;
+    boolean more = false;
+    final boolean childHasIdentityMatrix = hasIdentityMatrix();
+    final int parentFlags = parent.mGroupFlags;
+
+    if ((parentFlags & ViewGroup.FLAG_CLEAR_TRANSFORMATION) != 0) {
+        parent.getChildTransformation().clear();
+        parent.mGroupFlags &= ~ViewGroup.FLAG_CLEAR_TRANSFORMATION;
+    }
+
+    Transformation transformToApply = null;
+    boolean concatMatrix = false;
+    final boolean scalingRequired = mAttachInfo != null && mAttachInfo.mScalingRequired;
+    final Animation a = getAnimation();
+    if (a != null) {
+        more = applyLegacyAnimation(parent, drawingTime, a, scalingRequired);
+        concatMatrix = a.willChangeTransformationMatrix();
+        if (concatMatrix) {
+            mPrivateFlags3 |= PFLAG3_VIEW_IS_ANIMATING_TRANSFORM;
         }
-    
-        Transformation transformToApply = null;
-        boolean concatMatrix = false;
-        final boolean scalingRequired = mAttachInfo != null && mAttachInfo.mScalingRequired;
-        final Animation a = getAnimation();
-        if (a != null) {
-            more = applyLegacyAnimation(parent, drawingTime, a, scalingRequired);
-            concatMatrix = a.willChangeTransformationMatrix();
-            if (concatMatrix) {
-                mPrivateFlags3 |= PFLAG3_VIEW_IS_ANIMATING_TRANSFORM;
-            }
-            transformToApply = parent.getChildTransformation();
-        } else {
-            if ((mPrivateFlags3 & PFLAG3_VIEW_IS_ANIMATING_TRANSFORM) != 0) {
-                // No longer animating: clear out old animation matrix
-                mRenderNode.setAnimationMatrix(null);
-                mPrivateFlags3 &= ~PFLAG3_VIEW_IS_ANIMATING_TRANSFORM;
-            }
-            if (!drawingWithRenderNode
-                    && (parentFlags & ViewGroup.FLAG_SUPPORT_STATIC_TRANSFORMATIONS) != 0) {
-                final Transformation t = parent.getChildTransformation();
-                final boolean hasTransform = parent.getChildStaticTransformation(this, t);
-                if (hasTransform) {
-                    final int transformType = t.getTransformationType();
-                    transformToApply = transformType != Transformation.TYPE_IDENTITY ? t : null;
-                    concatMatrix = (transformType & Transformation.TYPE_MATRIX) != 0;
-                }
+        transformToApply = parent.getChildTransformation();
+    } else {
+        if ((mPrivateFlags3 & PFLAG3_VIEW_IS_ANIMATING_TRANSFORM) != 0) {
+            // No longer animating: clear out old animation matrix
+            mRenderNode.setAnimationMatrix(null);
+            mPrivateFlags3 &= ~PFLAG3_VIEW_IS_ANIMATING_TRANSFORM;
+        }
+        if (!drawingWithRenderNode
+                && (parentFlags & ViewGroup.FLAG_SUPPORT_STATIC_TRANSFORMATIONS) != 0) {
+            final Transformation t = parent.getChildTransformation();
+            final boolean hasTransform = parent.getChildStaticTransformation(this, t);
+            if (hasTransform) {
+                final int transformType = t.getTransformationType();
+                transformToApply = transformType != Transformation.TYPE_IDENTITY ? t : null;
+                concatMatrix = (transformType & Transformation.TYPE_MATRIX) != 0;
             }
         }
-    
-        concatMatrix |= !childHasIdentityMatrix;
-    
-        // Sets the flag as early as possible to allow draw() implementations
-        // to call invalidate() successfully when doing animations
-        mPrivateFlags |= PFLAG_DRAWN;
-    
-        if (!concatMatrix &&
-                (parentFlags & (ViewGroup.FLAG_SUPPORT_STATIC_TRANSFORMATIONS |
-                        ViewGroup.FLAG_CLIP_CHILDREN)) == ViewGroup.FLAG_CLIP_CHILDREN &&
-                canvas.quickReject(mLeft, mTop, mRight, mBottom, Canvas.EdgeType.BW) &&
-                (mPrivateFlags & PFLAG_DRAW_ANIMATION) == 0) {
-            mPrivateFlags2 |= PFLAG2_VIEW_QUICK_REJECTED;
-            return more;
-        }
-        mPrivateFlags2 &= ~PFLAG2_VIEW_QUICK_REJECTED;
-    
-        if (hardwareAcceleratedCanvas) {
-            // Clear INVALIDATED flag to allow invalidation to occur during rendering, but
-            // retain the flag's value temporarily in the mRecreateDisplayList flag
-            mRecreateDisplayList = (mPrivateFlags & PFLAG_INVALIDATED) != 0;
-            mPrivateFlags &= ~PFLAG_INVALIDATED;
-        }
-    
-        RenderNode renderNode = null;
-        Bitmap cache = null;
-        int layerType = getLayerType(); // TODO: signify cache state with just 'cache' local
-        if (layerType == LAYER_TYPE_SOFTWARE
-                || (!drawingWithRenderNode && layerType != LAYER_TYPE_NONE)) {
-            // If not drawing with RenderNode, treat HW layers as SW
-            layerType = LAYER_TYPE_SOFTWARE;
-            buildDrawingCache(true);
-            cache = getDrawingCache(true);
-        }
-    
-        if (drawingWithRenderNode) {
-            // Delay getting the display list until animation-driven alpha values are
-            // set up and possibly passed on to the view
-            renderNode = updateDisplayListIfDirty();
-            if (!renderNode.isValid()) {
-                // Uncommon, but possible. If a view is removed from the hierarchy during the call
-                // to getDisplayList(), the display list will be marked invalid and we should not
-                // try to use it again.
-                renderNode = null;
-                drawingWithRenderNode = false;
-            }
-        }
-    
-        int sx = 0;
-        int sy = 0;
-        if (!drawingWithRenderNode) {
-            computeScroll();
-            sx = mScrollX;
-            sy = mScrollY;
-        }
-    
-        final boolean drawingWithDrawingCache = cache != null && !drawingWithRenderNode;
-        final boolean offsetForScroll = cache == null && !drawingWithRenderNode;
-    
-        int restoreTo = -1;
-        if (!drawingWithRenderNode || transformToApply != null) {
-            restoreTo = canvas.save();
-        }
-        if (offsetForScroll) {
-            canvas.translate(mLeft - sx, mTop - sy);
-        } else {
-            if (!drawingWithRenderNode) {
-                canvas.translate(mLeft, mTop);
-            }
-            if (scalingRequired) {
-                if (drawingWithRenderNode) {
-                    // TODO: Might not need this if we put everything inside the DL
-                    restoreTo = canvas.save();
-                }
-                // mAttachInfo cannot be null, otherwise scalingRequired == false
-                final float scale = 1.0f / mAttachInfo.mApplicationScale;
-                canvas.scale(scale, scale);
-            }
-        }
-    
-        float alpha = drawingWithRenderNode ? 1 : (getAlpha() * getTransitionAlpha());
-        if (transformToApply != null
-                || alpha < 1
-                || !hasIdentityMatrix()
-                || (mPrivateFlags3 & PFLAG3_VIEW_IS_ANIMATING_ALPHA) != 0) {
-            if (transformToApply != null || !childHasIdentityMatrix) {
-                int transX = 0;
-                int transY = 0;
-    
-                if (offsetForScroll) {
-                    transX = -sx;
-                    transY = -sy;
-                }
-    
-                if (transformToApply != null) {
-                    if (concatMatrix) {
-                        if (drawingWithRenderNode) {
-                            renderNode.setAnimationMatrix(transformToApply.getMatrix());
-                        } else {
-                            // Undo the scroll translation, apply the transformation matrix,
-                            // then redo the scroll translate to get the correct result.
-                            canvas.translate(-transX, -transY);
-                            canvas.concat(transformToApply.getMatrix());
-                            canvas.translate(transX, transY);
-                        }
-                        parent.mGroupFlags |= ViewGroup.FLAG_CLEAR_TRANSFORMATION;
-                    }
-    
-                    float transformAlpha = transformToApply.getAlpha();
-                    if (transformAlpha < 1) {
-                        alpha *= transformAlpha;
-                        parent.mGroupFlags |= ViewGroup.FLAG_CLEAR_TRANSFORMATION;
-                    }
-                }
-    
-                if (!childHasIdentityMatrix && !drawingWithRenderNode) {
-                    canvas.translate(-transX, -transY);
-                    canvas.concat(getMatrix());
-                    canvas.translate(transX, transY);
-                }
-            }
-    
-            // Deal with alpha if it is or used to be <1
-            if (alpha < 1 || (mPrivateFlags3 & PFLAG3_VIEW_IS_ANIMATING_ALPHA) != 0) {
-                if (alpha < 1) {
-                    mPrivateFlags3 |= PFLAG3_VIEW_IS_ANIMATING_ALPHA;
-                } else {
-                    mPrivateFlags3 &= ~PFLAG3_VIEW_IS_ANIMATING_ALPHA;
-                }
-                parent.mGroupFlags |= ViewGroup.FLAG_CLEAR_TRANSFORMATION;
-                if (!drawingWithDrawingCache) {
-                    final int multipliedAlpha = (int) (255 * alpha);
-                    if (!onSetAlpha(multipliedAlpha)) {
-                        if (drawingWithRenderNode) {
-                            renderNode.setAlpha(alpha * getAlpha() * getTransitionAlpha());
-                        } else if (layerType == LAYER_TYPE_NONE) {
-                            canvas.saveLayerAlpha(sx, sy, sx + getWidth(), sy + getHeight(),
-                                    multipliedAlpha);
-                        }
-                    } else {
-                        // Alpha is handled by the child directly, clobber the layer's alpha
-                        mPrivateFlags |= PFLAG_ALPHA_SET;
-                    }
-                }
-            }
-        } else if ((mPrivateFlags & PFLAG_ALPHA_SET) == PFLAG_ALPHA_SET) {
-            onSetAlpha(255);
-            mPrivateFlags &= ~PFLAG_ALPHA_SET;
-        }
-    
-        if (!drawingWithRenderNode) {
-            // apply clips directly, since RenderNode won't do it for this draw
-            if ((parentFlags & ViewGroup.FLAG_CLIP_CHILDREN) != 0 && cache == null) {
-                if (offsetForScroll) {
-                    canvas.clipRect(sx, sy, sx + getWidth(), sy + getHeight());
-                } else {
-                    if (!scalingRequired || cache == null) {
-                        canvas.clipRect(0, 0, getWidth(), getHeight());
-                    } else {
-                        canvas.clipRect(0, 0, cache.getWidth(), cache.getHeight());
-                    }
-                }
-            }
-    
-            if (mClipBounds != null) {
-                // clip bounds ignore scroll
-                canvas.clipRect(mClipBounds);
-            }
-        }
-    
-        if (!drawingWithDrawingCache) {
-            if (drawingWithRenderNode) {
-                mPrivateFlags &= ~PFLAG_DIRTY_MASK;
-                ((DisplayListCanvas) canvas).drawRenderNode(renderNode);
-            } else {
-                // Fast path for layouts with no backgrounds
-                if ((mPrivateFlags & PFLAG_SKIP_DRAW) == PFLAG_SKIP_DRAW) {
-                    mPrivateFlags &= ~PFLAG_DIRTY_MASK;
-                    dispatchDraw(canvas);
-                } else {
-                    draw(canvas);
-                }
-            }
-        } else if (cache != null) {
-            mPrivateFlags &= ~PFLAG_DIRTY_MASK;
-            if (layerType == LAYER_TYPE_NONE) {
-                // no layer paint, use temporary paint to draw bitmap
-                Paint cachePaint = parent.mCachePaint;
-                if (cachePaint == null) {
-                    cachePaint = new Paint();
-                    cachePaint.setDither(false);
-                    parent.mCachePaint = cachePaint;
-                }
-                cachePaint.setAlpha((int) (alpha * 255));
-                canvas.drawBitmap(cache, 0.0f, 0.0f, cachePaint);
-            } else {
-                // use layer paint to draw the bitmap, merging the two alphas, but also restore
-                int layerPaintAlpha = mLayerPaint.getAlpha();
-                mLayerPaint.setAlpha((int) (alpha * layerPaintAlpha));
-                canvas.drawBitmap(cache, 0.0f, 0.0f, mLayerPaint);
-                mLayerPaint.setAlpha(layerPaintAlpha);
-            }
-        }
-    
-        if (restoreTo >= 0) {
-            canvas.restoreToCount(restoreTo);
-        }
-    
-        if (a != null && !more) {
-            if (!hardwareAcceleratedCanvas && !a.getFillAfter()) {
-                onSetAlpha(255);
-            }
-            parent.finishAnimatingView(this, a);
-        }
-    
-        if (more && hardwareAcceleratedCanvas) {
-            if (a.hasAlpha() && (mPrivateFlags & PFLAG_ALPHA_SET) == PFLAG_ALPHA_SET) {
-                // alpha animations should cause the child to recreate its display list
-                invalidate(true);
-            }
-        }
-    
-        mRecreateDisplayList = false;
-    
+    }
+
+    concatMatrix |= !childHasIdentityMatrix;
+
+    // Sets the flag as early as possible to allow draw() implementations
+    // to call invalidate() successfully when doing animations
+    mPrivateFlags |= PFLAG_DRAWN;
+
+    if (!concatMatrix &&
+            (parentFlags & (ViewGroup.FLAG_SUPPORT_STATIC_TRANSFORMATIONS |
+                    ViewGroup.FLAG_CLIP_CHILDREN)) == ViewGroup.FLAG_CLIP_CHILDREN &&
+            canvas.quickReject(mLeft, mTop, mRight, mBottom, Canvas.EdgeType.BW) &&
+            (mPrivateFlags & PFLAG_DRAW_ANIMATION) == 0) {
+        mPrivateFlags2 |= PFLAG2_VIEW_QUICK_REJECTED;
         return more;
     }
+    mPrivateFlags2 &= ~PFLAG2_VIEW_QUICK_REJECTED;
+
+    if (hardwareAcceleratedCanvas) {
+        // Clear INVALIDATED flag to allow invalidation to occur during rendering, but
+        // retain the flag's value temporarily in the mRecreateDisplayList flag
+        mRecreateDisplayList = (mPrivateFlags & PFLAG_INVALIDATED) != 0;
+        mPrivateFlags &= ~PFLAG_INVALIDATED;
+    }
+
+    RenderNode renderNode = null;
+    Bitmap cache = null;
+    int layerType = getLayerType(); // TODO: signify cache state with just 'cache' local
+    if (layerType == LAYER_TYPE_SOFTWARE
+            || (!drawingWithRenderNode && layerType != LAYER_TYPE_NONE)) {
+        // If not drawing with RenderNode, treat HW layers as SW
+        layerType = LAYER_TYPE_SOFTWARE;
+        buildDrawingCache(true);
+        cache = getDrawingCache(true);
+    }
+
+    if (drawingWithRenderNode) {
+        // Delay getting the display list until animation-driven alpha values are
+        // set up and possibly passed on to the view
+        renderNode = updateDisplayListIfDirty();
+        if (!renderNode.isValid()) {
+            // Uncommon, but possible. If a view is removed from the hierarchy during the call
+            // to getDisplayList(), the display list will be marked invalid and we should not
+            // try to use it again.
+            renderNode = null;
+            drawingWithRenderNode = false;
+        }
+    }
+
+    int sx = 0;
+    int sy = 0;
+    if (!drawingWithRenderNode) {
+        computeScroll();
+        sx = mScrollX;
+        sy = mScrollY;
+    }
+
+    final boolean drawingWithDrawingCache = cache != null && !drawingWithRenderNode;
+    final boolean offsetForScroll = cache == null && !drawingWithRenderNode;
+
+    int restoreTo = -1;
+    if (!drawingWithRenderNode || transformToApply != null) {
+        restoreTo = canvas.save();
+    }
+    if (offsetForScroll) {
+        canvas.translate(mLeft - sx, mTop - sy);
+    } else {
+        if (!drawingWithRenderNode) {
+            canvas.translate(mLeft, mTop);
+        }
+        if (scalingRequired) {
+            if (drawingWithRenderNode) {
+                // TODO: Might not need this if we put everything inside the DL
+                restoreTo = canvas.save();
+            }
+            // mAttachInfo cannot be null, otherwise scalingRequired == false
+            final float scale = 1.0f / mAttachInfo.mApplicationScale;
+            canvas.scale(scale, scale);
+        }
+    }
+
+    float alpha = drawingWithRenderNode ? 1 : (getAlpha() * getTransitionAlpha());
+    if (transformToApply != null
+            || alpha < 1
+            || !hasIdentityMatrix()
+            || (mPrivateFlags3 & PFLAG3_VIEW_IS_ANIMATING_ALPHA) != 0) {
+        if (transformToApply != null || !childHasIdentityMatrix) {
+            int transX = 0;
+            int transY = 0;
+
+            if (offsetForScroll) {
+                transX = -sx;
+                transY = -sy;
+            }
+
+            if (transformToApply != null) {
+                if (concatMatrix) {
+                    if (drawingWithRenderNode) {
+                        renderNode.setAnimationMatrix(transformToApply.getMatrix());
+                    } else {
+                        // Undo the scroll translation, apply the transformation matrix,
+                        // then redo the scroll translate to get the correct result.
+                        canvas.translate(-transX, -transY);
+                        canvas.concat(transformToApply.getMatrix());
+                        canvas.translate(transX, transY);
+                    }
+                    parent.mGroupFlags |= ViewGroup.FLAG_CLEAR_TRANSFORMATION;
+                }
+
+                float transformAlpha = transformToApply.getAlpha();
+                if (transformAlpha < 1) {
+                    alpha *= transformAlpha;
+                    parent.mGroupFlags |= ViewGroup.FLAG_CLEAR_TRANSFORMATION;
+                }
+            }
+
+            if (!childHasIdentityMatrix && !drawingWithRenderNode) {
+                canvas.translate(-transX, -transY);
+                canvas.concat(getMatrix());
+                canvas.translate(transX, transY);
+            }
+        }
+
+        // Deal with alpha if it is or used to be <1
+        if (alpha < 1 || (mPrivateFlags3 & PFLAG3_VIEW_IS_ANIMATING_ALPHA) != 0) {
+            if (alpha < 1) {
+                mPrivateFlags3 |= PFLAG3_VIEW_IS_ANIMATING_ALPHA;
+            } else {
+                mPrivateFlags3 &= ~PFLAG3_VIEW_IS_ANIMATING_ALPHA;
+            }
+            parent.mGroupFlags |= ViewGroup.FLAG_CLEAR_TRANSFORMATION;
+            if (!drawingWithDrawingCache) {
+                final int multipliedAlpha = (int) (255 * alpha);
+                if (!onSetAlpha(multipliedAlpha)) {
+                    if (drawingWithRenderNode) {
+                        renderNode.setAlpha(alpha * getAlpha() * getTransitionAlpha());
+                    } else if (layerType == LAYER_TYPE_NONE) {
+                        canvas.saveLayerAlpha(sx, sy, sx + getWidth(), sy + getHeight(),
+                                multipliedAlpha);
+                    }
+                } else {
+                    // Alpha is handled by the child directly, clobber the layer's alpha
+                    mPrivateFlags |= PFLAG_ALPHA_SET;
+                }
+            }
+        }
+    } else if ((mPrivateFlags & PFLAG_ALPHA_SET) == PFLAG_ALPHA_SET) {
+        onSetAlpha(255);
+        mPrivateFlags &= ~PFLAG_ALPHA_SET;
+    }
+
+    if (!drawingWithRenderNode) {
+        // apply clips directly, since RenderNode won't do it for this draw
+        if ((parentFlags & ViewGroup.FLAG_CLIP_CHILDREN) != 0 && cache == null) {
+            if (offsetForScroll) {
+                canvas.clipRect(sx, sy, sx + getWidth(), sy + getHeight());
+            } else {
+                if (!scalingRequired || cache == null) {
+                    canvas.clipRect(0, 0, getWidth(), getHeight());
+                } else {
+                    canvas.clipRect(0, 0, cache.getWidth(), cache.getHeight());
+                }
+            }
+        }
+
+        if (mClipBounds != null) {
+            // clip bounds ignore scroll
+            canvas.clipRect(mClipBounds);
+        }
+    }
+
+    if (!drawingWithDrawingCache) {
+        if (drawingWithRenderNode) {
+            mPrivateFlags &= ~PFLAG_DIRTY_MASK;
+            ((DisplayListCanvas) canvas).drawRenderNode(renderNode);
+        } else {
+            // Fast path for layouts with no backgrounds
+            if ((mPrivateFlags & PFLAG_SKIP_DRAW) == PFLAG_SKIP_DRAW) {
+                mPrivateFlags &= ~PFLAG_DIRTY_MASK;
+                dispatchDraw(canvas);
+            } else {
+                draw(canvas);
+            }
+        }
+    } else if (cache != null) {
+        mPrivateFlags &= ~PFLAG_DIRTY_MASK;
+        if (layerType == LAYER_TYPE_NONE) {
+            // no layer paint, use temporary paint to draw bitmap
+            Paint cachePaint = parent.mCachePaint;
+            if (cachePaint == null) {
+                cachePaint = new Paint();
+                cachePaint.setDither(false);
+                parent.mCachePaint = cachePaint;
+            }
+            cachePaint.setAlpha((int) (alpha * 255));
+            canvas.drawBitmap(cache, 0.0f, 0.0f, cachePaint);
+        } else {
+            // use layer paint to draw the bitmap, merging the two alphas, but also restore
+            int layerPaintAlpha = mLayerPaint.getAlpha();
+            mLayerPaint.setAlpha((int) (alpha * layerPaintAlpha));
+            canvas.drawBitmap(cache, 0.0f, 0.0f, mLayerPaint);
+            mLayerPaint.setAlpha(layerPaintAlpha);
+        }
+    }
+
+    if (restoreTo >= 0) {
+        canvas.restoreToCount(restoreTo);
+    }
+
+    if (a != null && !more) {
+        if (!hardwareAcceleratedCanvas && !a.getFillAfter()) {
+            onSetAlpha(255);
+        }
+        parent.finishAnimatingView(this, a);
+    }
+
+    if (more && hardwareAcceleratedCanvas) {
+        if (a.hasAlpha() && (mPrivateFlags & PFLAG_ALPHA_SET) == PFLAG_ALPHA_SET) {
+            // alpha animations should cause the child to recreate its display list
+            invalidate(true);
+        }
+    }
+
+    mRecreateDisplayList = false;
+
+    return more;
+}
+```
 
 上面这段代码，有两个需要指出的地方，一个就是canvas.translate()函数，这里表明了ViewRootImpl传进来的Canvas需要根据子视图本身的布局大小进行裁减，也就是说屏幕上所有子视图的canvas都只是一块裁减后的大小的canvas，当然这也就是为什么子视图的canvas的坐标原点不是从屏幕左上角开始，而是它自身大小的左上角开始的原因。
 
@@ -530,58 +536,60 @@ Android官方关于canvas的介绍告诉开发者：
 
 知道了绘图过程中必不可少的四样东西，我们就要看看该怎么样构建一个canvas了。 
 在此依次分析canvas的两个构造方法Canvas( )和Canvas(Bitmap bitmap)
-
-    /** * Construct an empty raster canvas. Use setBitmap() to specify a bitmap to 
-    * draw into. The initial target density is {@link Bitmap#DENSITY_NONE}; 
-    * this will typically be replaced when a target bitmap is set for the 
-    * canvas.
-    */
-    public Canvas() { 
-        if (!isHardwareAccelerated()) { 
-            mNativeCanvasWrapper = initRaster(null); 
-            mFinalizer = new CanvasFinalizer(mNativeCanvasWrapper); 
-        } else { 
-            mFinalizer = null; 
-        } 
-    }
+``` java
+/** * Construct an empty raster canvas. Use setBitmap() to specify a bitmap to 
+* draw into. The initial target density is {@link Bitmap#DENSITY_NONE}; 
+* this will typically be replaced when a target bitmap is set for the 
+* canvas.
+*/
+public Canvas() { 
+    if (!isHardwareAccelerated()) { 
+        mNativeCanvasWrapper = initRaster(null); 
+        mFinalizer = new CanvasFinalizer(mNativeCanvasWrapper); 
+    } else { 
+        mFinalizer = null; 
+    } 
+}
+```
 
 请注意该构造的第一句注释。官方不推荐通过该无参的构造方法生成一个canvas。如果要这么做那就需要调用setBitmap( )为其设置一个Bitmap。
 为什么Canvas非要一个Bitmap对象呢？原因很简单：Canvas需要一个Bitmap对象来保存像素，如果画的东西没有地方可以保存，又还有什么意义呢？
 既然不推荐这么做，那就接着有参的构造方法。
-
-    /** * Construct a canvas with the specified bitmap to draw into. The bitmap 
-    * must be mutable. 
-    * 
-    * The initial target density of the canvas is the same as the given 
-    * bitmap's density. 
-    * 
-    * @param bitmap Specifies a mutable bitmap for the canvas to draw into. 
-    */
-     public Canvas(Bitmap bitmap) {
-          if (!bitmap.isMutable()) { 
-            throw new IllegalStateException("Immutable bitmap passed to Canvas constructor"); 
-          } 
-          throwIfCannotDraw(bitmap); 
-          mNativeCanvasWrapper = initRaster(bitmap); 
-          mFinalizer = new CanvasFinalizer(mNativeCanvasWrapper); 
-          mBitmap = bitmap; mDensity = bitmap.mDensity; 
-      }
-
+``` java
+/** * Construct a canvas with the specified bitmap to draw into. The bitmap 
+* must be mutable. 
+* 
+* The initial target density of the canvas is the same as the given 
+* bitmap's density. 
+* 
+* @param bitmap Specifies a mutable bitmap for the canvas to draw into. 
+*/
+ public Canvas(Bitmap bitmap) {
+      if (!bitmap.isMutable()) { 
+        throw new IllegalStateException("Immutable bitmap passed to Canvas constructor"); 
+      } 
+      throwIfCannotDraw(bitmap); 
+      mNativeCanvasWrapper = initRaster(bitmap); 
+      mFinalizer = new CanvasFinalizer(mNativeCanvasWrapper); 
+      mBitmap = bitmap; mDensity = bitmap.mDensity; 
+  }
+```
 通过该构造方法为Canvas设置了一个Bitmap来保存所绘图像的像素信息。
 好了，知道了怎么构建一个canvas就来看看怎么利用它进行绘图。 
 下面是一个很简单的例子：
+``` java
+private void drawOnBitmap(){
+    Bitmap bitmap=Bitmap.createBitmap(800, 400, Bitmap.Config.ARGB_8888);
+    Canvas canvas=new Canvas(bitmap);
+    canvas.drawColor(Color.GREEN);
+    Paint paint=new Paint();
+    paint.setColor(Color.RED);
+    paint.setTextSize(60);
+    canvas.drawText("hello , everyone", 150, 200, paint);
+    mImageView.setImageBitmap(bitmap);
+}
+```
 
-    private void drawOnBitmap(){
-        Bitmap bitmap=Bitmap.createBitmap(800, 400, Bitmap.Config.ARGB_8888);
-        Canvas canvas=new Canvas(bitmap);
-        canvas.drawColor(Color.GREEN);
-        Paint paint=new Paint();
-        paint.setColor(Color.RED);
-        paint.setTextSize(60);
-        canvas.drawText("hello , everyone", 150, 200, paint);
-        mImageView.setImageBitmap(bitmap);
-    }
-    
 在此处为canvas设置一个Bitmap，然后利用canvas画了一小段文字，最后使用ImageView显示了Bitmap。 
 好了，看到这有人就有疑问了： 
 我们平常用得最多的View的onDraw()方法，为什么没有Bitmap也可以画出各种图形呢？ 
@@ -603,18 +611,19 @@ Android官方关于canvas的介绍告诉开发者：
 
 ##### canvas.translate
 从字面意思也可以知道它的作用是位移，那么这个位移到底是怎么实现的的呢？我们看段代码：
- 
-     protected void onDraw(Canvas canvas) {
-         super.onDraw(canvas);
-         canvas.drawColor(Color.GREEN);
-         Paint paint=new Paint();
-         paint.setTextSize(70);
-         paint.setColor(Color.BLUE);
-         canvas.drawText("蓝色字体为Translate前所画", 20, 80, paint);
-         canvas.translate(100,300);
-         paint.setColor(Color.BLACK);
-         canvas.drawText("黑色字体为Translate后所画", 20, 80, paint);
-    }
+``` java
+ protected void onDraw(Canvas canvas) {
+     super.onDraw(canvas);
+     canvas.drawColor(Color.GREEN);
+     Paint paint=new Paint();
+     paint.setTextSize(70);
+     paint.setColor(Color.BLUE);
+     canvas.drawText("蓝色字体为Translate前所画", 20, 80, paint);
+     canvas.translate(100,300);
+     paint.setColor(Color.BLACK);
+     canvas.drawText("黑色字体为Translate后所画", 20, 80, paint);
+}
+```
 
 这段代码的主要操作： <br/>
 1 画一句话，请参见代码第7行 <br/>
@@ -632,21 +641,21 @@ Android官方关于canvas的介绍告诉开发者：
 与translate类似，可以用rotate实现旋转。canvas.rotate相当于把坐标系旋转了一定角度。
 ##### canvas.clipRect
 canvas.clipRect表示剪裁操作，执行该操作后的绘制将显示在剪裁区域。<br/>
-
-    protected void onDraw(Canvas canvas) {
-        super.onDraw(canvas);
-        canvas.drawColor(Color.GREEN);
-        Paint paint=new Paint();
-        paint.setTextSize(60);
-        paint.setColor(Color.BLUE);
-        canvas.drawText("绿色部分为Canvas剪裁前的区域", 20, 80, paint);
-        Rect rect=new Rect(20,200,900,1000);
-        canvas.clipRect(rect);
-        canvas.drawColor(Color.YELLOW);
-        paint.setColor(Color.BLACK);
-        canvas.drawText("黄色部分为Canvas剪裁后的区域", 10, 310, paint);
-        }
-
+``` java
+protected void onDraw(Canvas canvas) {
+    super.onDraw(canvas);
+    canvas.drawColor(Color.GREEN);
+    Paint paint=new Paint();
+    paint.setTextSize(60);
+    paint.setColor(Color.BLUE);
+    canvas.drawText("绿色部分为Canvas剪裁前的区域", 20, 80, paint);
+    Rect rect=new Rect(20,200,900,1000);
+    canvas.clipRect(rect);
+    canvas.drawColor(Color.YELLOW);
+    paint.setColor(Color.BLACK);
+    canvas.drawText("黄色部分为Canvas剪裁后的区域", 10, 310, paint);
+    }
+```
 当我们调用了canvas.clipRect( )后，如果再继续画图那么所绘的图只会在所剪裁的范围内体现。</br> 
 当然除了按照矩形剪裁以外，还可以有别的剪裁方式，比如：canvas.clipPath( )和canvas.clipRegion( )。</br>
 
@@ -666,25 +675,25 @@ canvas.clipRect表示剪裁操作，执行该操作后的绘制将显示在剪�
 打个比方：原本在画板上画了一个姑娘，我又找了一张和画板一样大小的透明的纸(Layer)，然后在上面画了一朵花，</br>  
 最后我把这个纸盖在了画板上，呈现给世人的效果就是：一个美丽的姑娘手拿一朵鲜花。 </br>  
 看一下代码例子：</br>
-
-    protected void onDraw(Canvas canvas) {
-        super.onDraw(canvas);
-        canvas.drawColor(Color.GREEN);
-        Paint paint=new Paint();
-        paint.setTextSize(60);
-        paint.setColor(Color.BLUE);
-        canvas.drawText("绿色部分为Canvas剪裁前的区域", 20, 80, paint);
-        canvas.save();
-        Rect rect=new Rect(20,200,900,1000);
-        canvas.clipRect(rect);
-        canvas.drawColor(Color.YELLOW);
-        paint.setColor(Color.BLACK);
-        canvas.drawText("黄色部分为Canvas剪裁后的区域", 10, 310, paint);
-        canvas.restore();
-        paint.setColor(Color.RED);
-        canvas.drawText("XXOO", 20, 170, paint);
-    }
-
+``` java
+protected void onDraw(Canvas canvas) {
+    super.onDraw(canvas);
+    canvas.drawColor(Color.GREEN);
+    Paint paint=new Paint();
+    paint.setTextSize(60);
+    paint.setColor(Color.BLUE);
+    canvas.drawText("绿色部分为Canvas剪裁前的区域", 20, 80, paint);
+    canvas.save();
+    Rect rect=new Rect(20,200,900,1000);
+    canvas.clipRect(rect);
+    canvas.drawColor(Color.YELLOW);
+    paint.setColor(Color.BLACK);
+    canvas.drawText("黄色部分为Canvas剪裁后的区域", 10, 310, paint);
+    canvas.restore();
+    paint.setColor(Color.RED);
+    canvas.drawText("XXOO", 20, 170, paint);
+}
+```
 这个例子由刚才讲canvas.clipRect( )稍加修改而来 </br>
 1 执行canvas.save( )锁定canvas，请参见代码第8行 </br>
 2 在新的Layer上裁剪和绘图，请参见代码第9-13行 </br>
@@ -697,29 +706,29 @@ canvas.clipRect表示剪裁操作，执行该操作后的绘制将显示在剪�
 ##### PorterDuffXfermode
 
  可以实现圆角图片，代码如下;
- 
-    /**
-         * @param bitmap 原图
-         * @param pixels 角度
-         * @return 带圆角的图
-         */
-        public Bitmap getRoundCornerBitmap(Bitmap bitmap, float pixels) {
-            int width=bitmap.getWidth();
-            int height=bitmap.getHeight();
-            Bitmap roundCornerBitmap = Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888);
-            Canvas canvas = new Canvas(roundCornerBitmap);
-            Paint paint = new Paint();
-            paint.setColor(Color.BLACK);
-            paint.setAntiAlias(true);
-            Rect rect = new Rect(0, 0, width, height);
-            RectF rectF = new RectF(rect);
-            canvas.drawRoundRect(rectF, pixels, pixels, paint);
-            PorterDuffXfermode xfermode=new PorterDuffXfermode(PorterDuff.Mode.SRC_IN);
-            paint.setXfermode(xfermode);
-            canvas.drawBitmap(bitmap, rect, rect, paint);
-            return roundCornerBitmap;
-        }
-
+``` java 
+/**
+ * @param bitmap 原图
+ * @param pixels 角度
+ * @return 带圆角的图
+ */
+public Bitmap getRoundCornerBitmap(Bitmap bitmap, float pixels) {
+    int width=bitmap.getWidth();
+    int height=bitmap.getHeight();
+    Bitmap roundCornerBitmap = Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888);
+    Canvas canvas = new Canvas(roundCornerBitmap);
+    Paint paint = new Paint();
+    paint.setColor(Color.BLACK);
+    paint.setAntiAlias(true);
+    Rect rect = new Rect(0, 0, width, height);
+    RectF rectF = new RectF(rect);
+    canvas.drawRoundRect(rectF, pixels, pixels, paint);
+    PorterDuffXfermode xfermode=new PorterDuffXfermode(PorterDuff.Mode.SRC_IN);
+    paint.setXfermode(xfermode);
+    canvas.drawBitmap(bitmap, rect, rect, paint);
+    return roundCornerBitmap;
+}
+```
 主要操作如下： 
 1 生成canvas，请参见代码第7-10行 </br>
 注意给canvas设置的Bitmap的大小是和原图的大小一致的</br> 
@@ -777,22 +786,22 @@ canvas.clipRect表示剪裁操作，执行该操作后的绘制将显示在剪�
 ##### Bitmap和Matrix
 除了刚才提到的给图片设置圆角之外，在开发中还常有其他涉及到图片的操作，比如图片的旋转，缩放，平移等等，这些操作可以结合Matrix来实现。 </br>
 在此举个例子，看看利用matrix实现图片的平移和缩放。
-
-    private void drawBitmapWithMatrix(Canvas canvas){
-        Paint paint = new Paint();
-        paint.setAntiAlias(true);
-        Bitmap bitmap = BitmapFactory.decodeResource(getResources(),R.drawable.mm);
-        int width=bitmap.getWidth();
-        int height=bitmap.getHeight();
-        Matrix matrix = new Matrix();
-        canvas.drawBitmap(bitmap, matrix, paint);
-        matrix.setTranslate(width/2, height);
-        canvas.drawBitmap(bitmap, matrix, paint);
-        matrix.postScale(0.5f, 0.5f);
-        
-        canvas.drawBitmap(bitmap, matrix, paint);
-    }
+``` java
+private void drawBitmapWithMatrix(Canvas canvas){
+    Paint paint = new Paint();
+    paint.setAntiAlias(true);
+    Bitmap bitmap = BitmapFactory.decodeResource(getResources(),R.drawable.mm);
+    int width=bitmap.getWidth();
+    int height=bitmap.getHeight();
+    Matrix matrix = new Matrix();
+    canvas.drawBitmap(bitmap, matrix, paint);
+    matrix.setTranslate(width/2, height);
+    canvas.drawBitmap(bitmap, matrix, paint);
+    matrix.postScale(0.5f, 0.5f);
     
+    canvas.drawBitmap(bitmap, matrix, paint);
+}
+```   
 梳理一下这段代码的主要操作： </br>
 1 画出原图，请参见代码第2-8行</br> 
 2 平移原图，请参见代码第9-10行 </br>
@@ -823,17 +832,17 @@ set表示清空队列 </br>
 set在队列的中间位置，per执行队头插入，post执行队尾插入。</br> 
 当绘制图像时系统会按照队列中从头至尾的顺序依次调用这些方法。 </br>
 请看下面的几个小示例：</br>
-
-    Matrix m = new Matrix();
-    m.setRotate(45); 
-    m.setTranslate(80, 80);
-
+``` java
+Matrix m = new Matrix();
+m.setRotate(45); 
+m.setTranslate(80, 80);
+```
 只有m.setTranslate(80, 80)有效，因为m.setRotate(45)被清除.
-
-    Matrix m = new Matrix();
-    m.setTranslate(80, 80);
-    m.postRotate(45);
-
+``` java
+Matrix m = new Matrix();
+m.setTranslate(80, 80);
+m.postRotate(45);
+```
 先执行m.setTranslate(80, 80)后执行m.postRotate(45)
 
     Matrix m = new Matrix();
@@ -841,22 +850,23 @@ set在队列的中间位置，per执行队头插入，post执行队尾插入。<
     m.preRotate(45);
 
 先执行m.preRotate(45)后执行m.setTranslate(80, 80)
-
-    Matrix m = new Matrix();
-    m.preScale(2f,2f);    
-    m.preTranslate(50f, 20f);   
-    m.postScale(0.2f, 0.5f);    
-    m.postTranslate(20f, 20f);  
-    
+``` java
+Matrix m = new Matrix();
+m.preScale(2f,2f);    
+m.preTranslate(50f, 20f);   
+m.postScale(0.2f, 0.5f);    
+m.postTranslate(20f, 20f);  
+```   
 执行顺序： 
 m.preTranslate(50f, 20f)–>m.preScale(2f,2f)–>m.postScale(0.2f, 0.5f)–>m.postTranslate(20f, 20f)
-
-    Matrix m = new Matrix();
-    m.postTranslate(20, 20);   
-    m.preScale(0.2f, 0.5f);
-    m.setScale(0.8f, 0.8f);   
-    m.postScale(3f, 3f);
-    m.preTranslate(0.5f, 0.5f); 
+``` java
+Matrix m = new Matrix();
+m.postTranslate(20, 20);   
+m.preScale(0.2f, 0.5f);
+m.setScale(0.8f, 0.8f);   
+m.postScale(3f, 3f);
+m.preTranslate(0.5f, 0.5f); 
+```
 
 执行顺序： 
 m.preTranslate(0.5f, 0.5f)–>m.setScale(0.8f, 0.8f)–>m.postScale(3f, 3f)
@@ -874,19 +884,19 @@ m.preTranslate(0.5f, 0.5f)–>m.setScale(0.8f, 0.8f)–>m.postScale(3f, 3f)
 * ComposeShader——组合渲染
 
 在开发中调用paint.setShader(Shader shader)就可以实现渲染效果，在此以常用的BitmapShader为示例实现圆形图片。</br>
-
-    protected void onDraw(Canvas canvas) {
-         super.onDraw(canvas);
-         Paint paint = new Paint();
-         paint.setAntiAlias(true);
-         Bitmap bitmap = BitmapFactory.decodeResource(getResources(),R.drawable.mm);
-         int radius = bitmap.getWidth()/2;
-         BitmapShader bitmapShader = new BitmapShader(bitmap,Shader.TileMode.REPEAT,Shader.TileMode.REPEAT);
-         paint.setShader(bitmapShader);
-         canvas.translate(250,430);
-         canvas.drawCircle(radius, radius, radius, paint);
-    }
-
+``` java
+protected void onDraw(Canvas canvas) {
+     super.onDraw(canvas);
+     Paint paint = new Paint();
+     paint.setAntiAlias(true);
+     Bitmap bitmap = BitmapFactory.decodeResource(getResources(),R.drawable.mm);
+     int radius = bitmap.getWidth()/2;
+     BitmapShader bitmapShader = new BitmapShader(bitmap,Shader.TileMode.REPEAT,Shader.TileMode.REPEAT);
+     paint.setShader(bitmapShader);
+     canvas.translate(250,430);
+     canvas.drawCircle(radius, radius, radius, paint);
+}
+```
 1 生成BitmapShader，请参见代码第7行 </br>
 2 为Paint设置Shader，请参见代码第8行</br> 
 3 画出圆形图片，请参见代码第10行</br>
@@ -924,29 +934,29 @@ PathEffect有如下几个子类：
 * SumPathEffect 两种样式的叠加。先将两种路径效果叠加起来再作用于Path
 
 在此以CornerPathEffect和DashPathEffect为示例：
-
-    protected void onDraw(Canvas canvas) {
-         super.onDraw(canvas);
-         canvas.translate(0,300);
-         Paint paint = new Paint();
-         paint.setAntiAlias(true);
-         paint.setStyle(Paint.Style.STROKE);
-         paint.setColor(Color.GREEN);
-         paint.setStrokeWidth(8);
-         Path  path = new Path();
-         path.moveTo(15, 60);
-         for (int i = 0; i <= 35; i++) {
-              path.lineTo(i * 30, (float) (Math.random() * 150));
-          }
-         canvas.drawPath(path, paint);
-         canvas.translate(0, 400);
-         paint.setPathEffect(new CornerPathEffect(60));
-         canvas.drawPath(path, paint);
-         canvas.translate(0, 400);
-         paint.setPathEffect(new DashPathEffect(new float[] {15, 8}, 1));
-         canvas.drawPath(path, paint);
-    }
-    
+``` java
+protected void onDraw(Canvas canvas) {
+     super.onDraw(canvas);
+     canvas.translate(0,300);
+     Paint paint = new Paint();
+     paint.setAntiAlias(true);
+     paint.setStyle(Paint.Style.STROKE);
+     paint.setColor(Color.GREEN);
+     paint.setStrokeWidth(8);
+     Path  path = new Path();
+     path.moveTo(15, 60);
+     for (int i = 0; i <= 35; i++) {
+          path.lineTo(i * 30, (float) (Math.random() * 150));
+      }
+     canvas.drawPath(path, paint);
+     canvas.translate(0, 400);
+     paint.setPathEffect(new CornerPathEffect(60));
+     canvas.drawPath(path, paint);
+     canvas.translate(0, 400);
+     paint.setPathEffect(new DashPathEffect(new float[] {15, 8}, 1));
+     canvas.drawPath(path, paint);
+}
+```   
 分析一下这段代码中的主要操作： </br>
 1 设置Path为CornerPathEffect效果，请参见代码第16行</br> 
 在构建CornerPathEffect时传入了radius，它表示圆角的度数 </br>
