@@ -75,45 +75,66 @@ Canvas c =new Canvas(Bitmap.createBitmap(100,100,Bitmap.Config.ARGB_88880));
 所以draw过程也是在ViewRootImpl的performTraversals()方法内部调用的，其调用顺序在measure()和layout()之后，这里的mView对于Activity来说就是PhoneWindow.DectorView,ViewRootImpl中的代码会创建一个Canvas对象，然后调用View.draw()来执行具体的绘制工作。
 view递归draw流程图如下:
 ![github](https://github.com/heavenxue/SourceAnalysis/raw/master/pic/2.png "github")
-   由于ViewGroup没有重写View的draw方法，所以下面直接从View的draw方法开始分析
-     public void draw(Canvas canvas) {
-            ......
-            /*
-             * Draw traversal performs several drawing steps which must be executed
-             * in the appropriate order:
-             *
-             *      1. Draw the background
-             *      2. If necessary, save the canvas' layers to prepare for fading
-             *      3. Draw view's content
-             *      4. Draw children
-             *      5. If necessary, draw the fading edges and restore layers
-             *      6. Draw decorations (scrollbars for instance)
-             */
-            // Step 1, draw the background, if needed
-            int saveCount;if (!dirtyOpaque) {
-              drawBackground(canvas);
+由于ViewGroup没有重写View的draw方法，所以下面直接从View的draw方法开始分析
+
+    public void draw(Canvas canvas) {
+                ......
+                /*
+                 * Draw traversal performs several drawing steps which must be executed
+                 * in the appropriate order:
+                 *
+                 *      1. Draw the background
+                 *      2. If necessary, save the canvas' layers to prepare for fading
+                 *      3. Draw view's content
+                 *      4. Draw children
+                 *      5. If necessary, draw the fading edges and restore layers
+                 *      6. Draw decorations (scrollbars for instance)
+                 */
+                // Step 1, draw the background, if needed
+                int saveCount;if (!dirtyOpaque) {
+                  drawBackground(canvas);
+                }
+                // skip step 2 & 5 if possible (common case)
+                ......
+                // Step 2, save the canvas' layers
+                if (drawTop) {
+                   canvas.saveLayer(left, top, right, top + length, null, flags);
+                }
+                ......
+                // Step 3, draw the content
+                if (!dirtyOpaque) onDraw(canvas);
+                // Step 4, draw the children
+                dispatchDraw(canvas);
+                ......
+                if (drawTop) {
+                    matrix.setScale(1, fadeHeight * topFadeStrength);
+                    matrix.postTranslate(left, top);
+                    fade.setLocalMatrix(matrix);
+                    p.setShader(fade);
+                    canvas.drawRect(left, top, right, top + length, p);
+                }
+                ......
+                // Step 6, draw decorations (foreground, scrollbars)
+                onDrawForeground(canvas);
             }
-            // skip step 2 & 5 if possible (common case)
+
+看整个view的draw方法很复杂，但是注释很详细，从注释可以看出整个draw过程分6步。源码注释说（skip step 2 & 5 if possible (common case) ）第2步和第5步可以跳过，所以我们重点来看剩余4步，如下：
+##### 第一步，对view的背景进行绘制
+可以看见，draw方法通过调用drawBackground(canvas)实现了背景绘制，看下源码：
+
+    private void drawBackground(Canvas canvas) {
+            //获取xml中通过android:background属性或代码中setBackgroundColor(),setBackgroundResources()等方法进行赋值的背景drawable
+            final Drawable background = mBackground;
             ......
-            // Step 2, save the canvas' layers
-            if (drawTop) {
-               canvas.saveLayer(left, top, right, top + length, null, flags);
+            //根据layout过程确定的View位置来设置背景的绘制区域
+            if (mBackgroundSizeChanged && mBackground != null) {
+               mBackground.setBounds(0, 0,  mRight - mLeft, mBottom - mTop);
+               mBackgroundSizeChanged = false;
+               rebuildOutline();
             }
             ......
-            // Step 3, draw the content
-            if (!dirtyOpaque) onDraw(canvas);
-            // Step 4, draw the children
-            dispatchDraw(canvas);
-            ......
-            if (drawTop) {
-                matrix.setScale(1, fadeHeight * topFadeStrength);
-                matrix.postTranslate(left, top);
-                fade.setLocalMatrix(matrix);
-                p.setShader(fade);
-                canvas.drawRect(left, top, right, top + length, p);
-            }
-            ......
-            // Step 6, draw decorations (foreground, scrollbars)
-            onDrawForeground(canvas);
+            //调用Drawable的draw()方法来完成背景的绘制
+            background.draw(canvas);
         }
 
+##### 第三步，对view的内容绘制
