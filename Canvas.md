@@ -584,7 +584,7 @@ Android官方关于canvas的介绍告诉开发者：
 请注意onDraw( )的输入参数是一个canvas，它与我们自己创建的canvas不同。这个系统传递给我们的canvas来自于ViewRootImpl的Surface，
 在绘图时系统将会SkBitmap设置到SkCanvas中并返回与之对应Canvas。所以，在onDraw()中也是有一个Bitmap的，只是这个Bitmap是由系统创建的罢了。
 
-### canvas方法
+#### canvas方法
 
 我们可以调用canvas画各种图形，我们有时候还有对canvas做一些操作，比如旋转，剪裁，平移等等；有时候为了达到理想的效果，我们可能还需要一些特效。在此，对相关内容做一些介绍。
 
@@ -597,7 +597,7 @@ Android官方关于canvas的介绍告诉开发者：
 * Shader
 * PathEffect
 
-## canvas.translate
+##### canvas.translate
 从字面意思也可以知道它的作用是位移，那么这个位移到底是怎么实现的的呢？我们看段代码：
  
      protected void onDraw(Canvas canvas) {
@@ -612,12 +612,353 @@ Android官方关于canvas的介绍告诉开发者：
          canvas.drawText("黑色字体为Translate后所画", 20, 80, paint);
     }
 
-这段代码的主要操作： 
-1 画一句话，请参见代码第7行 
-2 使用translate在X方向平移了100个单位在Y方向平移了300个单位，请参见代码第8行 
-3 再画一句话，请参见代码第10行
+这段代码的主要操作： <br/>
+1 画一句话，请参见代码第7行 <br/>
+2 使用translate在X方向平移了100个单位在Y方向平移了300个单位，请参见代码第8行 <br/>
+3 再画一句话，请参见代码第10行<br/>
 
-在执行了平移之后所画的文字的位置=平移前坐标+平移的单位。 
-比如，平移后所画文字的实际位置为：120(20+100)和380(80+300)。 
-这就是说，canvas.translate相当于移动了坐标的原点，移动了坐标系。 
-这么说可能还是不够直观，那就上图： 
+在执行了平移之后所画的文字的位置=平移前坐标+平移的单位。 <br/>
+比如，平移后所画文字的实际位置为：120(20+100)和380(80+300)。 <br/>
+这就是说，canvas.translate相当于移动了坐标的原点，移动了坐标系。<br/> 
+这么说可能还是不够直观，那就上图： <br/>
+
+![github](https://github.com/heavenxue/SourceAnalysis/raw/master/pic/3.png "github")
+
+##### canvas.rotate
+与translate类似，可以用rotate实现旋转。canvas.rotate相当于把坐标系旋转了一定角度。
+##### canvas.clipRect
+canvas.clipRect表示剪裁操作，执行该操作后的绘制将显示在剪裁区域。<br/>
+
+    protected void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+        canvas.drawColor(Color.GREEN);
+        Paint paint=new Paint();
+        paint.setTextSize(60);
+        paint.setColor(Color.BLUE);
+        canvas.drawText("绿色部分为Canvas剪裁前的区域", 20, 80, paint);
+        Rect rect=new Rect(20,200,900,1000);
+        canvas.clipRect(rect);
+        canvas.drawColor(Color.YELLOW);
+        paint.setColor(Color.BLACK);
+        canvas.drawText("黄色部分为Canvas剪裁后的区域", 10, 310, paint);
+        }
+
+当我们调用了canvas.clipRect( )后，如果再继续画图那么所绘的图只会在所剪裁的范围内体现。</br> 
+当然除了按照矩形剪裁以外，还可以有别的剪裁方式，比如：canvas.clipPath( )和canvas.clipRegion( )。</br>
+
+##### canvas.save和canvas.restore
+刚才在说canvas.clipRect( )时，有人可能有这样的疑问：在调用canvas.clipRect( )后，如果还需要在剪裁范围外绘图该怎么办？</br>
+是不是系统有一个canvas.restoreClipRect( )方法呢？去看看官方的API就有点小失望了，我们期待的东西是不存在的；</br>
+不过可以换种方式来实现这个需求，这就是即将要介绍的canvas.save和canvas.restore。看到这个玩意，</br>
+可能绝大部分人就想起来了Activity中的onSaveInstanceState和onRestoreInstanceState这两者用来保存</br>
+和还原Activity的某些状态和数据。canvas也可以这样么？</br>  
+##### canvas.save
+它表示画布的锁定。如果我们把一个妹子锁在屋子里，那么外界的刮风下雨就影响不到她了；</br>  
+同理，如果对一个canvas执行了save操作就表示将已经所绘的图形锁定，之后的绘图就不会影响到原来画好的图形。 </br>  
+既然不会影响到原本已经画好的图形，那之后的操作又发生在哪里呢？ </br>  
+当执行canvas.save( )时会生成一个新的图层(Layer)，并且这个图层是透明的。此时，所有draw的方法都是在这个图层上进行，</br>  
+所以不会对之前画好的图形造成任何影响。在进行一些绘制操作后再使用canvas.restore()</br>  
+将这个新的图层与底下原本的画好的图像相结合形成一个新的图像。</br>  
+打个比方：原本在画板上画了一个姑娘，我又找了一张和画板一样大小的透明的纸(Layer)，然后在上面画了一朵花，</br>  
+最后我把这个纸盖在了画板上，呈现给世人的效果就是：一个美丽的姑娘手拿一朵鲜花。 </br>  
+看一下代码例子：</br>
+
+    protected void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+        canvas.drawColor(Color.GREEN);
+        Paint paint=new Paint();
+        paint.setTextSize(60);
+        paint.setColor(Color.BLUE);
+        canvas.drawText("绿色部分为Canvas剪裁前的区域", 20, 80, paint);
+        canvas.save();
+        Rect rect=new Rect(20,200,900,1000);
+        canvas.clipRect(rect);
+        canvas.drawColor(Color.YELLOW);
+        paint.setColor(Color.BLACK);
+        canvas.drawText("黄色部分为Canvas剪裁后的区域", 10, 310, paint);
+        canvas.restore();
+        paint.setColor(Color.RED);
+        canvas.drawText("XXOO", 20, 170, paint);
+    }
+
+这个例子由刚才讲canvas.clipRect( )稍加修改而来 </br>
+1 执行canvas.save( )锁定canvas，请参见代码第8行 </br>
+2 在新的Layer上裁剪和绘图，请参见代码第9-13行 </br>
+3 执行canvas.restore( )将Layer合并到原图，请参见代码第14行</br> 
+4 继续在原图上绘制，请参见代码第15-16行</br>
+
+###### 在使用canvas.save和canvas.restore时需注意一个问题：</br> 
+    save( )和restore( )最好配对使用，若restore( )的调用次数比save( )多可能会造成异常
+    
+##### PorterDuffXfermode
+
+ 可以实现圆角图片，代码如下;
+ 
+    /**
+         * @param bitmap 原图
+         * @param pixels 角度
+         * @return 带圆角的图
+         */
+        public Bitmap getRoundCornerBitmap(Bitmap bitmap, float pixels) {
+            int width=bitmap.getWidth();
+            int height=bitmap.getHeight();
+            Bitmap roundCornerBitmap = Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(roundCornerBitmap);
+            Paint paint = new Paint();
+            paint.setColor(Color.BLACK);
+            paint.setAntiAlias(true);
+            Rect rect = new Rect(0, 0, width, height);
+            RectF rectF = new RectF(rect);
+            canvas.drawRoundRect(rectF, pixels, pixels, paint);
+            PorterDuffXfermode xfermode=new PorterDuffXfermode(PorterDuff.Mode.SRC_IN);
+            paint.setXfermode(xfermode);
+            canvas.drawBitmap(bitmap, rect, rect, paint);
+            return roundCornerBitmap;
+        }
+
+主要操作如下： 
+1 生成canvas，请参见代码第7-10行 </br>
+注意给canvas设置的Bitmap的大小是和原图的大小一致的</br> 
+2 绘制圆角矩形，请参见代码第11-16行 </br>
+3 为Paint设置PorterDuffXfermode，请参见代码第17-18行</br> 
+4 绘制原图，请参见代码第19行 </br>
+纵观代码，发现一个陌生的东西PorterDuffXfermode而且陌生到了我们看到它的名字却不容易猜测其用途的地步；</br>
+这在Android的源码中还是很少有的。 我以前郁闷了很久，不知道它为什么叫这个名字，</br>
+直到后来看到《Android多媒体开发高级编程》才略知其原委。Thomas Porter和Tom Duff于1984年在ACM SIGGRAPH计算机图形学</br>
+刊物上发表了《Compositing digital images》。在这篇文章中详细介绍了一系列不同的规则用于彼此重叠地绘制图像；</br>
+这些规则中定义了哪些图像的哪些部分将出现在输出结果中。</br>
+
+这就是PorterDuffXfermode的名字由来及其核心作用。</br>
+现将PorterDuffXfermode描述的规则做一个介绍： </br>
+
+![github](https://github.com/heavenxue/SourceAnalysis/raw/master/pic/4.png "github")
+
+* PorterDuff.Mode.CLEAR 
+绘制不会提交到画布上
+* PorterDuff.Mode.SRC 
+只显示绘制源图像
+* PorterDuff.Mode.DST 
+只显示目标图像，即已在画布上的初始图像
+* PorterDuff.Mode.SRC_OVER 
+正常绘制显示，即后绘制的叠加在原来绘制的图上
+* PorterDuff.Mode.DST_OVER 
+上下两层都显示但是下层(DST)居上显示
+* PorterDuff.Mode.SRC_IN 
+取两层绘制的交集且只显示上层(SRC)
+* PorterDuff.Mode.DST_IN 
+取两层绘制的交集且只显示下层(DST)
+* PorterDuff.Mode.SRC_OUT 
+取两层绘制的不相交的部分且只显示上层(SRC)
+* PorterDuff.Mode.DST_OUT 
+取两层绘制的不相交的部分且只显示下层(DST)
+* PorterDuff.Mode.SRC_ATOP 
+两层相交，取下层(DST)的非相交部分和上层(SRC)的相交部分
+* PorterDuff.Mode.DST_ATOP 
+两层相交，取上层(SRC)的非相交部分和下层(DST)的相交部分
+* PorterDuff.Mode.XOR 
+挖去两图层相交的部分
+* PorterDuff.Mode.DARKEN 
+显示两图层全部区域且加深交集部分的颜色
+* PorterDuff.Mode.LIGHTEN 
+显示两图层全部区域且点亮交集部分的颜色
+* PorterDuff.Mode.MULTIPLY 
+显示两图层相交部分且加深该部分的颜色
+* PorterDuff.Mode.SCREEN 
+显示两图层全部区域且将该部分颜色变为透明色
+
+了解了这些规则，再回头看我们刚才例子中的代码，就好理解多了。<br/> 
+我们先画了一个圆角矩形，然后设置了PorterDuff.Mode为SRC_IN，最后绘制了原图。</br> 
+所以，它会取圆角矩形和原图相交的部分但只显示原图部分；这样就形成了圆角的Bitmap。</br>
+
+##### Bitmap和Matrix
+除了刚才提到的给图片设置圆角之外，在开发中还常有其他涉及到图片的操作，比如图片的旋转，缩放，平移等等，这些操作可以结合Matrix来实现。 </br>
+在此举个例子，看看利用matrix实现图片的平移和缩放。
+
+    private void drawBitmapWithMatrix(Canvas canvas){
+        Paint paint = new Paint();
+        paint.setAntiAlias(true);
+        Bitmap bitmap = BitmapFactory.decodeResource(getResources(),R.drawable.mm);
+        int width=bitmap.getWidth();
+        int height=bitmap.getHeight();
+        Matrix matrix = new Matrix();
+        canvas.drawBitmap(bitmap, matrix, paint);
+        matrix.setTranslate(width/2, height);
+        canvas.drawBitmap(bitmap, matrix, paint);
+        matrix.postScale(0.5f, 0.5f);
+        
+        canvas.drawBitmap(bitmap, matrix, paint);
+    }
+    
+梳理一下这段代码的主要操作： </br>
+1 画出原图，请参见代码第2-8行</br> 
+2 平移原图，请参见代码第9-10行 </br>
+3 缩放原图，请参见代码第11-13行 </br>
+
+在这里主要涉及到了Matrix。我们可以通过这个矩阵来实现对图片的一些操作。</br>
+有人可能会问：利用Matrix实现了图片的平移(Translate)是将坐标系进行了平移么？</br>
+不是的。Matrix所操作的是原图的每个像素点，它和坐标系是没有关系的。比如Scale是对每个像素点都进行了缩放，例如：</br>
+
+    matrix.postScale(0.5f, 0.5f);
+
+将原图的每个像素点的X的坐标都缩放成了原本的0.5</br> 
+将原图的每个像素点的Y坐标也都缩放成了原本的0.5</br>
+
+同样的道理在调用matrix.setTranslate( )时是对于原图中的每个像素都执行了位移操作。</br>
+
+在使用Matrix时经常用到一系列的set，pre，post方法。它们有什么区别呢？它们的调用顺序又会对实际效果有什么影响呢？</br>
+
+在此对该问题做一个总结： </br>
+在调用set，pre，post时可视为将这些方法插入到一个队列。</br>
+
+pre表示在队头插入一个方法</br>
+post表示在队尾插入一个方法</br>
+set表示清空队列 </br>
+队列中只保留该set方法，其余的方法都会清除。</br>
+当执行了一次set后pre总是插入到set之前的队列的最前面；post总是插入到set之后的队列的最后面。</br> 
+也可以这么简单的理解： </br>
+set在队列的中间位置，per执行队头插入，post执行队尾插入。</br> 
+当绘制图像时系统会按照队列中从头至尾的顺序依次调用这些方法。 </br>
+请看下面的几个小示例：</br>
+
+    Matrix m = new Matrix();
+    m.setRotate(45); 
+    m.setTranslate(80, 80);
+
+只有m.setTranslate(80, 80)有效，因为m.setRotate(45)被清除.
+
+    Matrix m = new Matrix();
+    m.setTranslate(80, 80);
+    m.postRotate(45);
+
+先执行m.setTranslate(80, 80)后执行m.postRotate(45)
+
+    Matrix m = new Matrix();
+    m.setTranslate(80, 80);
+    m.preRotate(45);
+
+先执行m.preRotate(45)后执行m.setTranslate(80, 80)
+
+    Matrix m = new Matrix();
+    m.preScale(2f,2f);    
+    m.preTranslate(50f, 20f);   
+    m.postScale(0.2f, 0.5f);    
+    m.postTranslate(20f, 20f);  
+    
+执行顺序： 
+m.preTranslate(50f, 20f)–>m.preScale(2f,2f)–>m.postScale(0.2f, 0.5f)–>m.postTranslate(20f, 20f)
+
+    Matrix m = new Matrix();
+    m.postTranslate(20, 20);   
+    m.preScale(0.2f, 0.5f);
+    m.setScale(0.8f, 0.8f);   
+    m.postScale(3f, 3f);
+    m.preTranslate(0.5f, 0.5f); 
+
+执行顺序： 
+m.preTranslate(0.5f, 0.5f)–>m.setScale(0.8f, 0.8f)–>m.postScale(3f, 3f)
+
+##### Shader
+有时候我们需要实现图像的渐变效果，这时候Shader就派上用场啦。 </br>
+先来瞅瞅啥是Shader：</br>
+ Android提供的Shader类主要用于渲染图像以及几何图形。 </br>
+ Shader的主要子类如下：</br>
+ 
+* BitmapShader———图像渲染
+* LinearGradient——–线性渲染
+* RadialGradient——–环形渲染
+* SweepGradient——–扫描渲染
+* ComposeShader——组合渲染
+
+在开发中调用paint.setShader(Shader shader)就可以实现渲染效果，在此以常用的BitmapShader为示例实现圆形图片。</br>
+
+    protected void onDraw(Canvas canvas) {
+         super.onDraw(canvas);
+         Paint paint = new Paint();
+         paint.setAntiAlias(true);
+         Bitmap bitmap = BitmapFactory.decodeResource(getResources(),R.drawable.mm);
+         int radius = bitmap.getWidth()/2;
+         BitmapShader bitmapShader = new BitmapShader(bitmap,Shader.TileMode.REPEAT,Shader.TileMode.REPEAT);
+         paint.setShader(bitmapShader);
+         canvas.translate(250,430);
+         canvas.drawCircle(radius, radius, radius, paint);
+    }
+
+1 生成BitmapShader，请参见代码第7行 </br>
+2 为Paint设置Shader，请参见代码第8行</br> 
+3 画出圆形图片，请参见代码第10行</br>
+
+在这段代码中，可能稍感陌生的就是BitmapShader构造方法。</br>
+
+    BitmapShader(Bitmap bitmap, TileMode tileX, TileMode tileY)
+
+第一个参数： </br>
+bitmap表示在渲染的对象</br> 
+第二个参数： </br>
+tileX 表示在位图上X方向渲染器平铺模式(TileMode)</br> 
+TileMode一共有三种：</br>
+
+* REPEAT ：重复
+* MIRROR ：镜像
+* CLAMP：拉伸
+这三种效果类似于给电脑屏幕设置屏保时，若图片太小可选择重复，拉伸，镜像。</br> 
+若选择REPEAT(重复 )：横向或纵向不断重复显示bitmap </br>
+若选择MIRROR(镜像)：横向或纵向不断翻转重复 </br>
+若选择CLAMP(拉伸) ：横向或纵向拉伸图片在该方向的最后一个像素。这点和设置电脑屏保有些不同</br> 
+第三个参数： </br>
+tileY表示在位图上Y方向渲染器平铺模式(TileMode)。与tileX同理，不再赘述。</br>
+
+##### PathEffect
+我们可以通过canvas.drawPath( )绘制一些简单的路径。但是假若需要给路径设置一些效果或者样式，这时候就要用到PathEffect了。
+
+PathEffect有如下几个子类：
+
+* CornerPathEffect 用平滑的方式衔接Path的各部分
+* DashPathEffect 将Path的线段虚线化
+* PathDashPathEffect 与DashPathEffect效果类似但需要自定义路径虚线的样式
+* DiscretePathEffect 离散路径效果
+* ComposePathEffect 两种样式的组合。先使用第一种效果然后在此基础上应用第二种效果
+* SumPathEffect 两种样式的叠加。先将两种路径效果叠加起来再作用于Path
+
+在此以CornerPathEffect和DashPathEffect为示例：
+
+    protected void onDraw(Canvas canvas) {
+         super.onDraw(canvas);
+         canvas.translate(0,300);
+         Paint paint = new Paint();
+         paint.setAntiAlias(true);
+         paint.setStyle(Paint.Style.STROKE);
+         paint.setColor(Color.GREEN);
+         paint.setStrokeWidth(8);
+         Path  path = new Path();
+         path.moveTo(15, 60);
+         for (int i = 0; i <= 35; i++) {
+              path.lineTo(i * 30, (float) (Math.random() * 150));
+          }
+         canvas.drawPath(path, paint);
+         canvas.translate(0, 400);
+         paint.setPathEffect(new CornerPathEffect(60));
+         canvas.drawPath(path, paint);
+         canvas.translate(0, 400);
+         paint.setPathEffect(new DashPathEffect(new float[] {15, 8}, 1));
+         canvas.drawPath(path, paint);
+    }
+    
+分析一下这段代码中的主要操作： </br>
+1 设置Path为CornerPathEffect效果，请参见代码第16行</br> 
+在构建CornerPathEffect时传入了radius，它表示圆角的度数 </br>
+2 设置Path为DashPathEffect效果，请参见代码第19行 </br>
+在构建DashPathEffect时传入的参数要稍微复杂些。 </br>
+DashPathEffect构造方法的第一个参数： </br>
+数组float[ ] { }中第一个数表示每条实线的长度，第二个数表示每条虚线的长度。</br> 
+DashPathEffect构造方法的第二个参数： </br>
+phase表示偏移量，动态改变该值会使路径产生动画效果</br>
+
+
+
+#### 参照
+https://developer.android.com/guide/topics/graphics/2d-graphics.html
+http://www.2cto.com/kf/201401/269901.html
+http://blog.csdn.net/yanbober/article/details/46128379
+http://gold.xitu.io/entry/57465c88c4c971005d6e4422
+http://p.codekk.com/blogs/detail/54cfab086c4761e5001b253f
+
