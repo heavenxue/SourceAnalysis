@@ -69,6 +69,51 @@ Canvas c =new Canvas(Bitmap.createBitmap(100,100,Bitmap.Config.ARGB_88880));
   好，既然这样，我们就从这里入手。
 
 #### draw源码解析
-  刚才上面我们已经提到了入口，所以，上面的注释说是用来测RootView的，上面传入参数后这个函数走的是MATCH_PARENT,使用MeasureSpec.makeMeasureSpec方法组装一个MeasureSpec,MeasureSpec的SpecMode等于EXACTLY,specSize等于WindowSize,也就是为何根视图总是全屏的原因。
+   刚才上面我们已经提到了入口，所以，上面的注释说是用来测RootView的，上面传入参数后这个函数走的是MATCH_PARENT,使用MeasureSpec.makeMeasureSpec方法组装一个MeasureSpec,MeasureSpec的SpecMode等于EXACTLY,specSize等于WindowSize,也就是为何根视图总是全屏的原因。
 整个流程如下：
 ![github](https://github.com/heavenxue/SourceAnalysis/raw/master/pic/1.png "github")
+所以draw过程也是在ViewRootImpl的performTraversals()方法内部调用的，其调用顺序在measure()和layout()之后，这里的mView对于Activity来说就是PhoneWindow.DectorView,ViewRootImpl中的代码会创建一个Canvas对象，然后调用View.draw()来执行具体的绘制工作。
+view递归draw流程图如下:
+![github](https://github.com/heavenxue/SourceAnalysis/raw/master/pic/2.png "github")
+   由于ViewGroup没有重写View的draw方法，所以下面直接从View的draw方法开始分析
+     public void draw(Canvas canvas) {
+            ......
+            /*
+             * Draw traversal performs several drawing steps which must be executed
+             * in the appropriate order:
+             *
+             *      1. Draw the background
+             *      2. If necessary, save the canvas' layers to prepare for fading
+             *      3. Draw view's content
+             *      4. Draw children
+             *      5. If necessary, draw the fading edges and restore layers
+             *      6. Draw decorations (scrollbars for instance)
+             */
+            // Step 1, draw the background, if needed
+            int saveCount;if (!dirtyOpaque) {
+              drawBackground(canvas);
+            }
+            // skip step 2 & 5 if possible (common case)
+            ......
+            // Step 2, save the canvas' layers
+            if (drawTop) {
+               canvas.saveLayer(left, top, right, top + length, null, flags);
+            }
+            ......
+            // Step 3, draw the content
+            if (!dirtyOpaque) onDraw(canvas);
+            // Step 4, draw the children
+            dispatchDraw(canvas);
+            ......
+            if (drawTop) {
+                matrix.setScale(1, fadeHeight * topFadeStrength);
+                matrix.postTranslate(left, top);
+                fade.setLocalMatrix(matrix);
+                p.setShader(fade);
+                canvas.drawRect(left, top, right, top + length, p);
+            }
+            ......
+            // Step 6, draw decorations (foreground, scrollbars)
+            onDrawForeground(canvas);
+        }
+
