@@ -71,4 +71,4 @@ Canvas c =new Canvas(Bitmap.createBitmap(100,100,Bitmap.Config.ARGB_88880));
 #### draw源码解析
   刚才上面我们已经提到了入口，所以，上面的注释说是用来测RootView的，上面传入参数后这个函数走的是MATCH_PARENT,使用MeasureSpec.makeMeasureSpec方法组装一个MeasureSpec,MeasureSpec的SpecMode等于EXACTLY,specSize等于WindowSize,也就是为何根视图总是全屏的原因。
 整个流程如下：
-![github](http://github.com/unicorn.png "github")
+![github](https://github.com/heavenxue/SourceAnalysis/raw/master/pic/1.png "github")
