@@ -8,7 +8,8 @@
     方法让View重新刷新，然后绘制一个新的形状，这样达到2D动画效果。
     下面我们就主要来了解下Canvas的使用方法。Canvas对象的获取方式有两种：
     一种我们通过重写View.onDraw方法，View中的Canvas对象会被当做参数传递过来，我们操作这个Canvas，效果会直接反应在View中。
-    另一种就是当你想创建一个Canvas对象时使用的方法： Canvas c =new Canvas(Bitmap.createBitmap(100,100,Bitmap.Config.ARGB_88880));
+    另一种就是当你想创建一个Canvas对象时使用的方法： 
+    Canvas c =new Canvas(Bitmap.createBitmap(100,100,Bitmap.Config.ARGB_88880));
 
 ### 探索
 
