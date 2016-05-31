@@ -21,53 +21,55 @@ Canvas c =new Canvas(Bitmap.createBitmap(100,100,Bitmap.Config.ARGB_88880));
 既然一个view的绘制主要是这三步，那一定有一个开始的地方啊，就像一个类是从main函数执行一样，对于view的绘制开始，这里先给出结论，后面会分析原因，具体结论如下：
 整个view的绘制流程是在ViewRootImpl类的performTraversals()方法（这个方法巨长）开始的，该函数做的执行过程主要是根据之前设置的状态，判断是否重新计算视图大小（measure）、
 是否重新放置视图的位置（layout）、是否重绘(draw)、其核心就是通过判断来选择顺序执行这三个方法中的哪个，如下：
-    ``` java    
-    private void performTraversals() {
-         //最外层的根视图的withMeasureSpec和heightMeasureSpec由来
-         //lp.width和lp.height在创建ViewGroup实例时等于MATCH_PARENT
-         ...
-         int childWidthMeasureSpec = getRootMeasureSpec(mWidth, lp.width);
-         int childHeightMeasureSpec = getRootMeasureSpec(mHeight, lp.height);
-         ...
-         mView.measure(childWidthMeasureSpec,childHeightMeasureSpec);
-         ...
-         mView.layout(0,0,mView.getMeasuredWidth(),mView.getMeasuredHeight());
-         ...
-         mView.draw(canvas);
-         ...
+
+``` java    
+private void performTraversals() {
+     //最外层的根视图的withMeasureSpec和heightMeasureSpec由来
+     //lp.width和lp.height在创建ViewGroup实例时等于MATCH_PARENT
+     ...
+     int childWidthMeasureSpec = getRootMeasureSpec(mWidth, lp.width);
+     int childHeightMeasureSpec = getRootMeasureSpec(mHeight, lp.height);
+     ...
+     mView.measure(childWidthMeasureSpec,childHeightMeasureSpec);
+     ...
+     mView.layout(0,0,mView.getMeasuredWidth(),mView.getMeasuredHeight());
+     ...
+     mView.draw(canvas);
+     ...
+}
+/**
+ * Figures out the measure spec for the root view in a window based on it's
+ * layout params.
+ *
+ * @param windowSize
+ *            The available width or height of the window
+ *
+ * @param rootDimension
+ *            The layout params for one dimension (width or height) of the
+ *            window.
+ *
+ * @return The measure spec to use to measure the root view.
+ */
+private static int getRootMeasureSpec(int windowSize, int rootDimension) {
+    int measureSpec;
+    switch (rootDimension) {
+    case ViewGroup.LayoutParams.MATCH_PARENT:
+        // Window can't resize. Force root view to be windowSize.
+        measureSpec = MeasureSpec.makeMeasureSpec(windowSize, MeasureSpec.EXACTLY);
+        break;
+    case ViewGroup.LayoutParams.WRAP_CONTENT:
+        // Window can resize. Set max size for root view.
+        measureSpec = MeasureSpec.makeMeasureSpec(windowSize, MeasureSpec.AT_MOST);
+        break;
+    default:
+        // Window wants to be an exact size. Force root view to be that size.
+        measureSpec = MeasureSpec.makeMeasureSpec(rootDimension, MeasureSpec.EXACTLY);
+        break;
     }
-    /**
-     * Figures out the measure spec for the root view in a window based on it's
-     * layout params.
-     *
-     * @param windowSize
-     *            The available width or height of the window
-     *
-     * @param rootDimension
-     *            The layout params for one dimension (width or height) of the
-     *            window.
-     *
-     * @return The measure spec to use to measure the root view.
-     */
-    private static int getRootMeasureSpec(int windowSize, int rootDimension) {
-        int measureSpec;
-        switch (rootDimension) {
-        case ViewGroup.LayoutParams.MATCH_PARENT:
-            // Window can't resize. Force root view to be windowSize.
-            measureSpec = MeasureSpec.makeMeasureSpec(windowSize, MeasureSpec.EXACTLY);
-            break;
-        case ViewGroup.LayoutParams.WRAP_CONTENT:
-            // Window can resize. Set max size for root view.
-            measureSpec = MeasureSpec.makeMeasureSpec(windowSize, MeasureSpec.AT_MOST);
-            break;
-        default:
-            // Window wants to be an exact size. Force root view to be that size.
-            measureSpec = MeasureSpec.makeMeasureSpec(rootDimension, MeasureSpec.EXACTLY);
-            break;
-        }
-        return measureSpec;
-    }
-    ```
+    return measureSpec;
+}
+```
+ 
   好，既然这样，我们就从这里入手。
 
 #### draw源码解析
