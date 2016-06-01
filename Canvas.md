@@ -1,9 +1,31 @@
 # canvas源码解析
--------------------
 
-[TOC]
-
-
+- [简介](#简介)
+- [探索](#探索)
+    - [思路](#思路)
+- [draw源码解析](#draw源码解析)
+    - [第一步，对view的背景进行绘制](#第一步，对view的背景进行绘制)
+    - [第三步，对view的内容绘制](#第三步，对view的内容绘制)
+    - [第四步，对当前的view的所有子view进行绘制，如果当前view没有子view就不需要绘制](#第四步，对当前的view的所有子view进行绘制，如果当前view没有子view就不需要绘制)
+    - [第六步，对view的滚动条进行绘制](#第六步，对view的滚动条进行绘制)
+        - [draw原理总结](#draw原理总结)
+- [Canvas源码解析](#Canvas源码解析)
+    - [从代码入手来看](#从代码入手来看)
+    - [canvas介绍](#canvas介绍)
+    - [canvas方法](#canvas方法)
+        - [canvas.translate](#canvas.translate)
+        - [canvas.rotate](#canvas.rotate)
+        - [canvas.clipRect](#canvas.clipRect)
+        - [canvas.save和canvas.restore](#canvas.save和canvas.restore)
+        - [canvas.save](#canvas.save)
+        - [PorterDuffXfermode](#PorterDuffXfermode)
+        - [Shader](#Shader)
+        - [PathEffect](#PathEffect)
+- [参照](#参照)
+        
+    
+  
+  
 ## 简介
 
 >Android中使用图形处理引擎，2D部分是android SDK内部自己提供，3D部分是用Open GL ES 1.0。今天我们主要要了解的是2D相关的，
@@ -76,7 +98,7 @@ private static int getRootMeasureSpec(int windowSize, int rootDimension) {
  
   好，既然这样，我们就从这里入手。
 
-### draw源码解析
+## draw源码解析
    刚才上面我们已经提到了入口，所以，上面的注释说是用来测RootView的，上面传入参数后这个函数走的是MATCH_PARENT,使用MeasureSpec.makeMeasureSpec方法组装一个MeasureSpec,MeasureSpec的SpecMode等于EXACTLY,specSize等于WindowSize,也就是为何根视图总是全屏的原因。
 整个流程如下：
 ![github](https://github.com/heavenxue/SourceAnalysis/raw/master/pic/1.png "github")
@@ -129,7 +151,7 @@ public void draw(Canvas canvas) {
 }
 ```
 看整个view的draw方法很复杂，但是注释很详细，从注释可以看出整个draw过程分6步。源码注释说（skip step 2 & 5 if possible (common case) ）第2步和第5步可以跳过，所以我们重点来看剩余4步，如下：
-#### 第一步，对view的背景进行绘制
+### 第一步，对view的背景进行绘制
 可以看见，draw方法通过调用drawBackground(canvas)实现了背景绘制，看下源码：
 ``` java
 private void drawBackground(Canvas canvas) {
@@ -148,7 +170,7 @@ private void drawBackground(Canvas canvas) {
     }
 ```
 
-#### 第三步，对view的内容绘制
+### 第三步，对view的内容绘制
 可以看到，这里去调用了View的onDraw()方法，所以我们看下view的onDraw()方法（ViewGroup没有重写这个方法），如下：
 ``` java
 /**
@@ -161,7 +183,7 @@ protected void onDraw(Canvas canvas) {
 ```
 
 可以看到，是一个空方法，因为每个view的内容部分是各不相同的，所以要由子类去实现具体的逻辑
-#### 第四步，对当前的view的所有子view进行绘制，如果当前view没有子view就不需要绘制
+### 第四步，对当前的view的所有子view进行绘制，如果当前view没有子view就不需要绘制
 我们来看下view的draw方法中的dispatchDraw(canvas)方法源码，可以看到：
 ``` java
 /**
@@ -208,7 +230,7 @@ protected void dispatchDraw(Canvas canvas) {
     }
 
 可以看出，drawChild方法调用了子view的draw方法，所以说viewGroup类已经为我们重写了dispatchDraw()功能实现，我们一般不需要重写这个方法，但可以重载父类函数实现具体功能。
-#### 第六步，对view的滚动条进行绘制
+### 第六步，对view的滚动条进行绘制
  可以看到，这里去调用了一下view的onDrawScrollBars()方法，所以看下它的源码如下：
 ``` java
 /**
@@ -522,7 +544,7 @@ boolean draw(Canvas canvas, ViewGroup parent, long drawingTime) {
 
 第二个需要指出的是如果ViewGroup的子视图仍然是ViewGroup，那么它会回调dispatchDraw(canvas)进行分法，如果子视图是View，那么就调用View的draw(canvas)函数进行绘制。
 
-## canvas介绍
+### canvas介绍
 Android官方关于canvas的介绍告诉开发者： 
 在绘图时需要明确四个核心的东西(basic components)：
 
@@ -704,7 +726,7 @@ protected void onDraw(Canvas canvas) {
 3 执行canvas.restore( )将Layer合并到原图，请参见代码第14行</br> 
 4 继续在原图上绘制，请参见代码第15-16行</br>
 
-##### 在使用canvas.save和canvas.restore时需注意一个问题：</br> 
+在使用canvas.save和canvas.restore时需注意一个问题：</br> 
     save( )和restore( )最好配对使用，若restore( )的调用次数比save( )多可能会造成异常
     
 #### PorterDuffXfermode
