@@ -1,6 +1,8 @@
 # canvas源码解析
+-------------------
 
 [TOC]
+
 
 ## 简介
 
@@ -16,9 +18,9 @@ BitmapDrawable和TransitionDrawable等。</br>
 另一种就是当你想创建一个Canvas对象时使用的方法： </br>
 Canvas c =new Canvas(Bitmap.createBitmap(100,100,Bitmap.Config.ARGB_88880));
 
-### 探索
+## 探索
 
-#### 思路
+### 思路
   我们知道一个View的绘制过程都必须经历三个重要的过程，也就是measure,layout和draw
 既然一个view的绘制主要是这三步，那一定有一个开始的地方啊，就像一个类是从main函数执行一样，对于view的绘制开始，这里先给出结论，后面会分析原因，具体结论如下：
 整个view的绘制流程是在ViewRootImpl类的performTraversals()方法（这个方法巨长）开始的，该函数做的执行过程主要是根据之前设置的状态，判断是否重新计算视图大小（measure）、
@@ -74,7 +76,7 @@ private static int getRootMeasureSpec(int windowSize, int rootDimension) {
  
   好，既然这样，我们就从这里入手。
 
-#### draw源码解析
+### draw源码解析
    刚才上面我们已经提到了入口，所以，上面的注释说是用来测RootView的，上面传入参数后这个函数走的是MATCH_PARENT,使用MeasureSpec.makeMeasureSpec方法组装一个MeasureSpec,MeasureSpec的SpecMode等于EXACTLY,specSize等于WindowSize,也就是为何根视图总是全屏的原因。
 整个流程如下：
 ![github](https://github.com/heavenxue/SourceAnalysis/raw/master/pic/1.png "github")
@@ -127,7 +129,7 @@ public void draw(Canvas canvas) {
 }
 ```
 看整个view的draw方法很复杂，但是注释很详细，从注释可以看出整个draw过程分6步。源码注释说（skip step 2 & 5 if possible (common case) ）第2步和第5步可以跳过，所以我们重点来看剩余4步，如下：
-##### 第一步，对view的背景进行绘制
+#### 第一步，对view的背景进行绘制
 可以看见，draw方法通过调用drawBackground(canvas)实现了背景绘制，看下源码：
 ``` java
 private void drawBackground(Canvas canvas) {
@@ -146,7 +148,7 @@ private void drawBackground(Canvas canvas) {
     }
 ```
 
-##### 第三步，对view的内容绘制
+#### 第三步，对view的内容绘制
 可以看到，这里去调用了View的onDraw()方法，所以我们看下view的onDraw()方法（ViewGroup没有重写这个方法），如下：
 ``` java
 /**
@@ -159,7 +161,7 @@ protected void onDraw(Canvas canvas) {
 ```
 
 可以看到，是一个空方法，因为每个view的内容部分是各不相同的，所以要由子类去实现具体的逻辑
-##### 第四步，对当前的view的所有子view进行绘制，如果当前view没有子view就不需要绘制
+#### 第四步，对当前的view的所有子view进行绘制，如果当前view没有子view就不需要绘制
 我们来看下view的draw方法中的dispatchDraw(canvas)方法源码，可以看到：
 ``` java
 /**
@@ -206,7 +208,7 @@ protected void dispatchDraw(Canvas canvas) {
     }
 
 可以看出，drawChild方法调用了子view的draw方法，所以说viewGroup类已经为我们重写了dispatchDraw()功能实现，我们一般不需要重写这个方法，但可以重载父类函数实现具体功能。
-##### 第六步，对view的滚动条进行绘制
+#### 第六步，对view的滚动条进行绘制
  可以看到，这里去调用了一下view的onDrawScrollBars()方法，所以看下它的源码如下：
 ``` java
 /**
@@ -224,7 +226,7 @@ protected final void onDrawScrollBars(Canvas canvas) {
 ``` 
 可以看见其实任何一个View都是有（水平垂直）滚动条的，只是一般情况下都不显示而已，到此，View的draw绘制部分已经分析完毕。
 
-### draw原理总结
+#### draw原理总结
 可以看见，绘制过程就是把view对象绘制在屏幕上，整个draw()过程需要注意如下细节:
 
 * 如果该view是一个ViewGroup，则需要递归绘制其包含的所有子view
@@ -234,7 +236,7 @@ protected final void onDrawScrollBars(Canvas canvas) {
 * 在获取画布剪切区（每个view的draw中传入的Canvas）时会自动处理掉padding,子view获取Canvas不用关注这些逻辑，只用关心如何绘制即可
 * 默认情况下，子view的viewGroup.drawChild绘制顺序和子view被添加的顺序一致，但是你也可以重载ViewGroup.getChildDrawingOrder()方法提供不同的顺序
 
-#### Canvas源码解析
+## Canvas源码解析
 ### 从代码入手来看
 好了，开始canvas之旅了，因此我们首先从ViewGroup的dispatchDraw开始入手，这里要传入一个Canvas，这个Canvas是由ViewRootImpl.java传入，此时的Canvas是一个画布
 而dispatchDraw方法里面会调用了drawChild(canvas, transientChild, drawingTime);这个方法里可以找到child.draw(canvas, this, drawingTime);
@@ -520,7 +522,7 @@ boolean draw(Canvas canvas, ViewGroup parent, long drawingTime) {
 
 第二个需要指出的是如果ViewGroup的子视图仍然是ViewGroup，那么它会回调dispatchDraw(canvas)进行分法，如果子视图是View，那么就调用View的draw(canvas)函数进行绘制。
 
-### canvas介绍
+## canvas介绍
 Android官方关于canvas的介绍告诉开发者： 
 在绘图时需要明确四个核心的东西(basic components)：
 
@@ -598,7 +600,7 @@ private void drawOnBitmap(){
 请注意onDraw( )的输入参数是一个canvas，它与我们自己创建的canvas不同。这个系统传递给我们的canvas来自于ViewRootImpl的Surface，
 在绘图时系统将会SkBitmap设置到SkCanvas中并返回与之对应Canvas。所以，在onDraw()中也是有一个Bitmap的，只是这个Bitmap是由系统创建的罢了。
 
-#### canvas方法
+### canvas方法
 
 我们可以调用canvas画各种图形，我们有时候还有对canvas做一些操作，比如旋转，剪裁，平移等等；有时候为了达到理想的效果，我们可能还需要一些特效。在此，对相关内容做一些介绍。
 
@@ -611,7 +613,7 @@ private void drawOnBitmap(){
 * Shader
 * PathEffect
 
-##### canvas.translate
+#### canvas.translate
 从字面意思也可以知道它的作用是位移，那么这个位移到底是怎么实现的的呢？我们看段代码：
 ``` java
  protected void onDraw(Canvas canvas) {
@@ -639,9 +641,9 @@ private void drawOnBitmap(){
 
 ![github](https://github.com/heavenxue/SourceAnalysis/raw/master/pic/3.png "github")
 
-##### canvas.rotate
+#### canvas.rotate
 与translate类似，可以用rotate实现旋转。canvas.rotate相当于把坐标系旋转了一定角度。
-##### canvas.clipRect
+#### canvas.clipRect
 canvas.clipRect表示剪裁操作，执行该操作后的绘制将显示在剪裁区域。<br/>
 ``` java
 protected void onDraw(Canvas canvas) {
@@ -661,13 +663,13 @@ protected void onDraw(Canvas canvas) {
 当我们调用了canvas.clipRect( )后，如果再继续画图那么所绘的图只会在所剪裁的范围内体现。</br> 
 当然除了按照矩形剪裁以外，还可以有别的剪裁方式，比如：canvas.clipPath( )和canvas.clipRegion( )。</br>
 
-##### canvas.save和canvas.restore
+#### canvas.save和canvas.restore
 刚才在说canvas.clipRect( )时，有人可能有这样的疑问：在调用canvas.clipRect( )后，如果还需要在剪裁范围外绘图该怎么办？</br>
 是不是系统有一个canvas.restoreClipRect( )方法呢？去看看官方的API就有点小失望了，我们期待的东西是不存在的；</br>
 不过可以换种方式来实现这个需求，这就是即将要介绍的canvas.save和canvas.restore。看到这个玩意，</br>
 可能绝大部分人就想起来了Activity中的onSaveInstanceState和onRestoreInstanceState这两者用来保存</br>
 和还原Activity的某些状态和数据。canvas也可以这样么？</br>  
-##### canvas.save
+#### canvas.save
 它表示画布的锁定。如果我们把一个妹子锁在屋子里，那么外界的刮风下雨就影响不到她了；</br>  
 同理，如果对一个canvas执行了save操作就表示将已经所绘的图形锁定，之后的绘图就不会影响到原来画好的图形。 </br>  
 既然不会影响到原本已经画好的图形，那之后的操作又发生在哪里呢？ </br>  
@@ -702,10 +704,10 @@ protected void onDraw(Canvas canvas) {
 3 执行canvas.restore( )将Layer合并到原图，请参见代码第14行</br> 
 4 继续在原图上绘制，请参见代码第15-16行</br>
 
-###### 在使用canvas.save和canvas.restore时需注意一个问题：</br> 
+##### 在使用canvas.save和canvas.restore时需注意一个问题：</br> 
     save( )和restore( )最好配对使用，若restore( )的调用次数比save( )多可能会造成异常
     
-##### PorterDuffXfermode
+#### PorterDuffXfermode
 
  可以实现圆角图片，代码如下;
 ``` java 
@@ -785,7 +787,7 @@ public Bitmap getRoundCornerBitmap(Bitmap bitmap, float pixels) {
 我们先画了一个圆角矩形，然后设置了PorterDuff.Mode为SRC_IN，最后绘制了原图。</br> 
 所以，它会取圆角矩形和原图相交的部分但只显示原图部分；这样就形成了圆角的Bitmap。</br>
 
-##### Bitmap和Matrix
+#### Bitmap和Matrix
 除了刚才提到的给图片设置圆角之外，在开发中还常有其他涉及到图片的操作，比如图片的旋转，缩放，平移等等，这些操作可以结合Matrix来实现。 </br>
 在此举个例子，看看利用matrix实现图片的平移和缩放。
 ``` java
@@ -873,7 +875,7 @@ m.preTranslate(0.5f, 0.5f);
 执行顺序： 
 m.preTranslate(0.5f, 0.5f)–>m.setScale(0.8f, 0.8f)–>m.postScale(3f, 3f)
 
-##### Shader
+#### Shader
 有时候我们需要实现图像的渐变效果，这时候Shader就派上用场啦。 </br>
 先来瞅瞅啥是Shader：</br>
  Android提供的Shader类主要用于渲染图像以及几何图形。 </br>
@@ -923,7 +925,7 @@ TileMode一共有三种：</br>
 第三个参数： </br>
 tileY表示在位图上Y方向渲染器平铺模式(TileMode)。与tileX同理，不再赘述。</br>
 
-##### PathEffect
+#### PathEffect
 我们可以通过canvas.drawPath( )绘制一些简单的路径。但是假若需要给路径设置一些效果或者样式，这时候就要用到PathEffect了。
 
 PathEffect有如下几个子类：
@@ -971,7 +973,7 @@ phase表示偏移量，动态改变该值会使路径产生动画效果</br>
 
 
 
-#### 参照
+## 参照
 https://developer.android.com/guide/topics/graphics/2d-graphics.html</br>
 http://www.2cto.com/kf/201401/269901.html</br>
 http://blog.csdn.net/yanbober/article/details/46128379</br>
