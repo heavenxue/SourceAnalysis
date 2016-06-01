@@ -4,7 +4,7 @@
 - [探索](#探索)
     - [思路](#思路)
 - [draw源码解析](#draw源码解析)
-- [canvas源码解析](#canvas源码解析)
+- [canvas解析](#canvas解析)
     - [从代码入手来看](#从代码入手来看)
     - [canvas介绍](#canvas介绍)
     - [canvas方法](#canvas方法)
@@ -245,7 +245,7 @@ protected final void onDrawScrollBars(Canvas canvas) {
 * 在获取画布剪切区（每个view的draw中传入的Canvas）时会自动处理掉padding,子view获取Canvas不用关注这些逻辑，只用关心如何绘制即可
 * 默认情况下，子view的viewGroup.drawChild绘制顺序和子view被添加的顺序一致，但是你也可以重载ViewGroup.getChildDrawingOrder()方法提供不同的顺序
 
-## canvas源码解析
+## canvas解析
 ### 从代码入手来看
 好了，开始canvas之旅了，因此我们首先从ViewGroup的dispatchDraw开始入手，这里要传入一个Canvas，这个Canvas是由ViewRootImpl.java传入，此时的Canvas是一个画布
 而dispatchDraw方法里面会调用了drawChild(canvas, transientChild, drawingTime);这个方法里可以找到child.draw(canvas, this, drawingTime);
