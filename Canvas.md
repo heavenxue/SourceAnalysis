@@ -1,19 +1,20 @@
-### canvas源码解析
-#### 目录
+# canvas源码解析
 
 ## 简介
 
-  Android中使用图形处理引擎，2D部分是android SDK内部自己提供，3D部分是用Open GL ES 1.0。今天我们主要要了解的是2D相关的，
-如果你想看3D的话那么可以跳过这篇文章。    大部分2D使用的api都在android.graphics和android.graphics.drawable包中。
+>Android中使用图形处理引擎，2D部分是android SDK内部自己提供，3D部分是用Open GL ES 1.0。今天我们主要要了解的是2D相关的，
+如果你想看3D的话那么可以跳过这篇文章。<br/>
+    大部分2D使用的api都在android.graphics和android.graphics.drawable包中。
 他们提供了图形处理相关的： Canvas、ColorFilter、Point(点)和RetcF(矩形)等，还有一些动画相关的：AnimationDrawable、
-BitmapDrawable和TransitionDrawable等。以图形处理来说，我们最常用到的就是在一个View上画一些图片、形状或者自定义的
-文本内容，这里我们都是使用Canvas来实现的。你可以获取View中的Canvas对象，绘制一些自定义形状，然后调用View.invalidate
-方法让View重新刷新，然后绘制一个新的形状，这样达到2D动画效果。
+BitmapDrawable和TransitionDrawable等。</br>
+以图形处理来说，我们最常用到的就是在一个View上画一些图片、形状或者自定义的文本内容，这里我们都是使用Canvas来实现的。</br>
+你可以获取View中的Canvas对象，绘制一些自定义形状，然后调用View.invalidate方法让View重新刷新，然后绘制一个新的形状，这样达到2D动画效果。</br>
 下面我们就主要来了解下Canvas的使用方法。Canvas对象的获取方式有两种：
-一种我们通过重写View.onDraw方法，View中的Canvas对象会被当做参数传递过来，我们操作这个Canvas，效果会直接反应在View中。
-另一种就是当你想创建一个Canvas对象时使用的方法： 
+一种我们通过重写View.onDraw方法，View中的Canvas对象会被当做参数传递过来，我们操作这个Canvas，效果会直接反应在View中。</br>
+另一种就是当你想创建一个Canvas对象时使用的方法： </br>
 Canvas c =new Canvas(Bitmap.createBitmap(100,100,Bitmap.Config.ARGB_88880));
 
+-------------------
 ### 探索
 
 #### 思路
