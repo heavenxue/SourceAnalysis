@@ -95,7 +95,7 @@ private static int getRootMeasureSpec(int windowSize, int rootDimension) {
 
 所以draw过程也是在`ViewRootImpl`的`performTraversals()`方法内部调用的，其调用顺序在`measure()`和`layout()`之后，这里的mView对于Activity来说就是PhoneWindow.DectorView,ViewRootImpl中的代码会创建一个Canvas对象，然后调用View.draw()来执行具体的绘制工作。
 view递归draw流程图如下:<br/>
-![github](https://github.com/heavenxue/SourceAnalysis/raw/master/pic/2.png "github")
+![github](https://github.com/heavenxue/SourceAnalysis/raw/master/pic/2.png "github")</br>
 由于ViewGroup没有重写View的draw方法，所以下面直接从View的draw方法开始分析
 
 ``` java
