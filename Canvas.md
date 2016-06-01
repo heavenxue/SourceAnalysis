@@ -145,19 +145,19 @@ public void draw(Canvas canvas) {
 可以看见，draw方法通过调用`drawBackground(canvas)`实现了背景绘制，看下源码：
 ``` java
 private void drawBackground(Canvas canvas) {
-        //获取xml中通过android:background属性或代码中setBackgroundColor(),setBackgroundResources()等方法进行赋值的背景drawable
-        final Drawable background = mBackground;
-        ......
-        //根据layout过程确定的View位置来设置背景的绘制区域
-        if (mBackgroundSizeChanged && mBackground != null) {
-           mBackground.setBounds(0, 0,  mRight - mLeft, mBottom - mTop);
-           mBackgroundSizeChanged = false;
-           rebuildOutline();
-        }
-        ......
-        //调用Drawable的draw()方法来完成背景的绘制
-        background.draw(canvas);
+    //获取xml中通过android:background属性或代码中setBackgroundColor(),setBackgroundResources()等方法进行赋值的背景drawable
+    final Drawable background = mBackground;
+    ......
+    //根据layout过程确定的View位置来设置背景的绘制区域
+    if (mBackgroundSizeChanged && mBackground != null) {
+       mBackground.setBounds(0, 0,  mRight - mLeft, mBottom - mTop);
+       mBackgroundSizeChanged = false;
+       rebuildOutline();
     }
+    ......
+    //调用Drawable的draw()方法来完成背景的绘制
+    background.draw(canvas);
+}
 ```
 
 ### 第三步，对view的内容绘制
