@@ -1,5 +1,7 @@
 # canvas源码解析
 
+[TOC]
+
 ## 简介
 
 >Android中使用图形处理引擎，2D部分是android SDK内部自己提供，3D部分是用Open GL ES 1.0。今天我们主要要了解的是2D相关的，
@@ -14,7 +16,6 @@ BitmapDrawable和TransitionDrawable等。</br>
 另一种就是当你想创建一个Canvas对象时使用的方法： </br>
 Canvas c =new Canvas(Bitmap.createBitmap(100,100,Bitmap.Config.ARGB_88880));
 
--------------------
 ### 探索
 
 #### 思路
