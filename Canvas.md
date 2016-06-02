@@ -266,11 +266,12 @@ ViewGroup复写了`dispatchDraw()`来对其子视图进行绘制，通常你自�
 #### draw原理总结
 可以看见，绘制过程就是把view对象绘制在屏幕上，整个`draw()`过程需要注意如下细节:
 
-* 如果该view是一个ViewGroup，则需要递归绘制其包含的所有子view
+* 如果该view是一个`ViewGroup`，则需要递归绘制其包含的所有子view
 * view默认不会绘制任何内容，真正的绘制都需要自己在子类中实现。
-* view的绘制是借助`onDraw()`传入canvas类进行的
-* 区分view动画和ViewGroup布局动画，前者指的是View自身的动画，可以通过setAnimation添加，后者专门针对ViewGroup显示内部子视图时设置动画，可以在xml布局文件中对ViewGroup设置layoutAnimation属性（譬如对LinearLayout设置子view在显示时出现逐行，随机等不同动画效果）
-* 在获取画布剪切区（每个view的draw中传入的Canvas）时会自动处理掉padding,子view获取Canvas不用关注这些逻辑，只用关心如何绘制即可
+* view的绘制是借助`onDraw()`传入`canvas`类进行的
+* 区分view动画和ViewGroup布局动画，前者指的是View自身的动画，可以通过`setAnimation`添加，后者专门针对ViewGroup显示内部子视图时设置动画，</br>
+可以在xml布局文件中对ViewGroup设置`layoutAnimation`属性（譬如对`LinearLayout`设置子view在显示时出现逐行，随机等不同动画效果）
+* 在获取画布剪切区（每个view的`draw`中传入的`Canvas`）时会自动处理掉`padding`,子view获取Canvas不用关注这些逻辑，只用关心如何绘制即可
 * 默认情况下，子view的`viewGroup.drawChild`绘制顺序和子view被添加的顺序一致，但是你也可以重载`ViewGroup.getChildDrawingOrder()`方法提供不同的顺序
 
 ## canvas解析
