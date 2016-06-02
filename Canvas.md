@@ -7,6 +7,7 @@
 - [canvas解析](#canvas解析)
     - [从代码入手来看](#从代码入手来看)
     - [canvas介绍](#canvas介绍)
+    - [canvas坐标系与绘图坐标系](#canvas坐标系与绘图坐标系)
     - [canvas方法](#canvas方法)
 - [参照](#参照)
         
@@ -17,7 +18,7 @@
 
 >Android中使用图形处理引擎，2D部分是android SDK内部自己提供，3D部分是用Open GL ES 1.0。今天我们主要要了解的是2D相关的，
 如果你想看3D的话那么可以跳过这篇文章。<br/>
-    大部分2D使用的api都在android.graphics和android.graphics.drawable包中。
+    大部分2D使用的api都在**android.graphics**和**android.graphics.drawable**包中。
 他们提供了图形处理相关的： `Canvas`、`ColorFilter`、`Point`(点)和`RetcF`(矩形)等，还有一些动画相关的：`AnimationDrawable`、
 `BitmapDrawable`和`TransitionDrawable`等。</br>
 以图形处理来说，我们最常用到的就是在一个View上画一些图片、形状或者自定义的文本内容，这里我们都是使用Canvas来实现的。</br>
@@ -90,12 +91,15 @@ private static int getRootMeasureSpec(int windowSize, int rootDimension) {
 
 ## draw源码解析
    刚才上面我们已经提到了入口，所以，上面的注释说是用来测RootView的，上面传入参数后这个函数走的是`MATCH_PARENT`,使用`MeasureSpec.makeMeasureSpec`方法组装一个`MeasureSpec`,`MeasureSpec`的`SpecMode`等于`EXACTLY`,`specSize`等于`WindowSize`,也就是为何根视图总是全屏的原因。
-整个流程如下：
+整个流程如下：</br>
+
 ![github](https://github.com/heavenxue/SourceAnalysis/raw/master/pic/1.png "github")
 
 所以draw过程也是在`ViewRootImpl`的`performTraversals()`方法内部调用的，其调用顺序在`measure()`和`layout()`之后，这里的mView对于Activity来说就是PhoneWindow.DectorView,ViewRootImpl中的代码会创建一个Canvas对象，然后调用View.draw()来执行具体的绘制工作。
 view递归draw流程图如下:<br/>
+
 ![github](https://github.com/heavenxue/SourceAnalysis/raw/master/pic/2.png "github")</br>
+
 由于ViewGroup没有重写View的draw方法，所以下面直接从View的draw方法开始分析
 
 ``` java
@@ -140,9 +144,11 @@ public void draw(Canvas canvas) {
     onDrawForeground(canvas);
 }
 ```
+
 看整个view的draw方法很复杂，但是注释很详细，从注释可以看出整个draw过程分6步。源码注释说（skip step 2 & 5 if possible (common case) ）第2步和第5步可以跳过，所以我们重点来看剩余4步，如下：
 ### 第一步，对view的背景进行绘制
 可以看见，draw方法通过调用`drawBackground(canvas)`实现了背景绘制，看下源码：
+
 ``` java
 private void drawBackground(Canvas canvas) {
     //获取xml中通过android:background属性或代码中setBackgroundColor(),setBackgroundResources()等方法进行赋值的背景drawable
@@ -162,6 +168,7 @@ private void drawBackground(Canvas canvas) {
 
 ### 第三步，对view的内容绘制
 可以看到，这里去调用了View的`onDraw()`方法，所以我们看下view的`onDraw()`方法（ViewGroup没有重写这个方法），如下：
+
 ``` java
 /**
  * Implement this to do your drawing.
@@ -175,6 +182,7 @@ protected void onDraw(Canvas canvas) {
 可以看到，是一个空方法，因为每个view的内容部分是各不相同的，所以要由子类去实现具体的逻辑
 ### 第四步，对当前的view的所有子view进行绘制，如果当前view没有子view就不需要绘制
 我们来看下view的draw方法中的`dispatchDraw(canvas)`方法源码，可以看到：
+
 ``` java
 /**
  * Called by draw to draw the child views. This may be overridden
@@ -186,6 +194,7 @@ protected void dispatchDraw(Canvas canvas) {
 
 }
 ```
+
 view的`dispatchDraw`方法也是一个空方法，而且注释说明了如果view包含子类需要重写它，所以我们有必要看下ViewGroup的`dispatchDraw()`方法源码</br>
 （这也就是说刚刚说的当前View的所有子view进行绘制，如果当前的View没有子view就不需要进行绘制的原因，因为如果是View调用该方法是空的，而viewGroup才实现），如下：
 
@@ -214,7 +223,6 @@ protected void dispatchDraw(Canvas canvas) {
 }
 ```
 
-
 `dispatchDraw(Canvas)`核心代码就是通过for循环调用drawChild(canvas, child, drawingTime)方法对ViewGroup的每个子视图运用动画以及绘制。
 可以看出，ViewGroup确实重写了View的`dispatchDraw()`方法，该方法内部会遍历每个子View,然后调用`drawChild()`方法，我们可以看下ViewGroup的`drawChild()`方法，如下：
 
@@ -225,6 +233,7 @@ protected void dispatchDraw(Canvas canvas) {
 可以看出，drawChild方法调用了子view的`draw`方法，所以说viewGroup类已经为我们重写了`dispatchDraw()`功能实现，我们一般不需要重写这个方法
 ### 第六步，对view的滚动条进行绘制
  可以看到，这里去调用了一下view的`onDrawScrollBars()`方法，所以看下它的源码如下：
+ 
 ``` java
 /**
  * <p>Request the drawing of the horizontal and the vertical scrollbar. The
@@ -239,9 +248,12 @@ protected final void onDrawScrollBars(Canvas canvas) {
     ......
 }
 ``` 
+
 可以看见其实任何一个View都是有（水平垂直）滚动条的，只是一般情况下都不显示而已，到此，View的draw绘制部分已经分析完毕。
+
 总而言之，整个绘制流程就是：</br>
 View的背景绘制---->保存Canvas的layers --->View本身内容的绘制---->子视图的绘制---->绘制渐变框---->滚动条的绘制
+
 当不需要绘制Layer的时候第二步和第五步可能跳过。因此在绘制的时候，能省的layer尽可省，可以提高绘制效率
 `onDraw()`和`dispatchDraw()`分别为View本身内容和子视图绘制的函数。
 View和ViewGroup的`onDraw()`都是空实现，因为具体View如何绘制由设计者来决定的，默认不绘制任何东西。
@@ -261,10 +273,12 @@ ViewGroup复写了`dispatchDraw()`来对其子视图进行绘制，通常你自�
 * 默认情况下，子view的`viewGroup.drawChild`绘制顺序和子view被添加的顺序一致，但是你也可以重载`ViewGroup.getChildDrawingOrder()`方法提供不同的顺序
 
 ## canvas解析
+
 ### 从代码入手来看
 好了，开始canvas之旅了，因此我们首先从ViewGroup的`dispatchDraw`开始入手，这里要传入一个Canvas，这个Canvas是由`ViewRootImpl.java`传入，此时的Canvas是一个画布
 而`dispatchDraw`方法里面会调用了`drawChild(canvas, transientChild, drawingTime)`;这个方法里可以找到`child.draw(canvas, this, drawingTime)`;
 继续看，指向了view的`draw`方法，这个函数不同于`draw(Canvas canvas)`函数，后者是view绘制开始的地方，下面是源码：
+
 ``` java
 boolean draw(Canvas canvas, ViewGroup parent, long drawingTime) {
     ......
@@ -286,6 +300,7 @@ boolean draw(Canvas canvas, ViewGroup parent, long drawingTime) {
     ......
 }
 ```
+
 `child.draw(canvas, this,drawingTime)`肯定是处理了和父视图相关的逻辑，但对于View的绘制，最终调用的还是`View.draw(Canvas)`方法。</br>
 上面这段代码，有两个需要指出的地方，一个就是`canvas.translate()`函数，这里表明了ViewRootImpl传进来的Canvas需要根据子视图本身的布局大小进行裁减，<br/>
 也就是说屏幕上所有子视图的canvas都只是一块裁减后的大小的canvas，当然这也就是为什么子视图的canvas的坐标原点不是从屏幕左上角开始，而是它自身大小的左上角开始的原因。</br>
@@ -295,7 +310,9 @@ boolean draw(Canvas canvas, ViewGroup parent, long drawingTime) {
 请求重绘 View 树，即 draw 过程，假如视图发生大小没有变化就不会调用`layout()`过程，并且只绘制那些调用了`invalidate()`方法的 View。</br>
 * requestLayout()
 当布局变化的时候，比如方向变化，尺寸的变化，会调用该方法，在自定义的视图中，如果某些情况下希望重新测量尺寸大小，应该手动去调用该方法，它会触发measure()和layout()过程，但不会进行 draw。
+
 ### canvas介绍
+
 Android官方关于canvas的介绍告诉开发者： 
 在绘图时需要明确四个核心的东西(basic components)：
 
@@ -313,6 +330,7 @@ Android官方关于canvas的介绍告诉开发者：
 
 知道了绘图过程中必不可少的四样东西，我们就要看看该怎么样构建一个canvas了。 
 在此依次分析canvas的两个构造方法`Canvas( )`和`Canvas(Bitmap bitmap)`
+
 ``` java
 /** * Construct an empty raster canvas. Use setBitmap() to specify a bitmap to 
 * draw into. The initial target density is {@link Bitmap#DENSITY_NONE}; 
@@ -329,9 +347,10 @@ public Canvas() {
 }
 ```
 
-请注意该构造的第一句注释。官方不推荐通过该无参的构造方法生成一个canvas。如果要这么做那就需要调用setBitmap( )为其设置一个Bitmap。
+请注意该构造的第一句注释。官方不推荐通过该无参的构造方法生成一个canvas。如果要这么做那就需要调用`setBitmap( )`为其设置一个Bitmap。
 为什么Canvas非要一个Bitmap对象呢？原因很简单：Canvas需要一个Bitmap对象来保存像素，如果画的东西没有地方可以保存，又还有什么意义呢？
 既然不推荐这么做，那就接着有参的构造方法。
+
 ``` java
 /** * Construct a canvas with the specified bitmap to draw into. The bitmap 
 * must be mutable. 
@@ -351,9 +370,11 @@ public Canvas() {
       mBitmap = bitmap; mDensity = bitmap.mDensity; 
   }
 ```
+
 通过该构造方法为Canvas设置了一个Bitmap来保存所绘图像的像素信息。
 好了，知道了怎么构建一个canvas就来看看怎么利用它进行绘图。 
 下面是一个很简单的例子：
+
 ``` java
 private void drawOnBitmap(){
     Bitmap bitmap=Bitmap.createBitmap(800, 400, Bitmap.Config.ARGB_8888);
@@ -373,9 +394,69 @@ private void drawOnBitmap(){
 请注意`onDraw( )`的输入参数是一个canvas，它与我们自己创建的canvas不同。这个系统传递给我们的canvas来自于ViewRootImpl的Surface，
 在绘图时系统将会SkBitmap设置到SkCanvas中并返回与之对应Canvas。所以，`在onDraw()`中也是有一个Bitmap的，只是这个Bitmap是由系统创建的罢了。
 
+### canvas坐标系与绘图坐标系
+
+Canvas绘图中牵扯到两种坐标系：Canvas坐标系与绘图坐标系。</br>
+
+* Canvas坐标系 
+Canvas坐标系指的是Canvas本身的坐标系，Canvas坐标系有且只有一个，且是唯一不变的，其坐标原点在View的左上角，从坐标原点向右为x轴的正半轴，从坐标原点向下为y轴的正半轴。
+
+* 绘图坐标系 
+Canvas的drawXXX方法中传入的各种坐标指的都是绘图坐标系中的坐标，而非Canvas坐标系中的坐标。默认情况下，绘图坐标系与Canvas坐标系完全重合，</br>
+即初始情况下，绘图坐标系的坐标原点也在View的左上角，从原点向右为x轴正半轴，从原点向下为y轴正半轴。</br>
+但不同于Canvas坐标系，绘图坐标系并不是一成不变的，可以通过调用Canvas的`translate`方法平移坐标系，可以通过Canvas的`rotate`方法旋转坐标系，</br>
+还可以通过Canvas的`scale`方法缩放坐标系，而且需要注意的是，`translate`、`rotate`、`scale`的操作都是基于当前绘图坐标系的，而不是基于Canvas坐标系，</br>
+一旦通过以上方法对坐标系进行了操作之后，当前绘图坐标系就变化了，以后绘图都是基于更新的绘图坐标系了。也就是说，真正对我们绘图有用的是绘图坐标系而非Canvas坐标系。
+
+为了更好的理解绘图坐标系，请看如下的代码：</br>
+
+```java
+ //绘制坐标系
+    private void drawAxis(Canvas canvas){
+        int canvasWidth = canvas.getWidth();
+        int canvasHeight = canvas.getHeight();
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeCap(Paint.Cap.ROUND);
+        paint.setStrokeWidth(6 * density);
+
+        //用绿色画x轴，用蓝色画y轴
+
+        //第一次绘制坐标轴
+        paint.setColor(0xff00ff00);//绿色
+        canvas.drawLine(0, 0, canvasWidth, 0, paint);//绘制x轴
+        paint.setColor(0xff0000ff);//蓝色
+        canvas.drawLine(0, 0, 0, canvasHeight, paint);//绘制y轴
+
+        //对坐标系平移后，第二次绘制坐标轴
+        canvas.translate(canvasWidth / 4, canvasWidth /4);//把坐标系向右下角平移
+        paint.setColor(0xff00ff00);//绿色
+        canvas.drawLine(0, 0, canvasWidth, 0, paint);//绘制x轴
+        paint.setColor(0xff0000ff);//蓝色
+        canvas.drawLine(0, 0, 0, canvasHeight, paint);//绘制y轴
+
+        //再次平移坐标系并在此基础上旋转坐标系，第三次绘制坐标轴
+        canvas.translate(canvasWidth / 4, canvasWidth / 4);//在上次平移的基础上再把坐标系向右下角平移
+        canvas.rotate(30);//基于当前绘图坐标系的原点旋转坐标系
+        paint.setColor(0xff00ff00);//绿色
+        canvas.drawLine(0, 0, canvasWidth, 0, paint);//绘制x轴
+        paint.setColor(0xff0000ff);//蓝色
+        canvas.drawLine(0, 0, 0, canvasHeight, paint);//绘制y轴
+    }
+```
+
+界面如下：<br/>
+
+![github](https://github.com/heavenxue/SourceAnalysis/raw/master/pic/5.png "github")
+
+第一次绘制绘图坐标系时，绘图坐标系默认情况下和Canvas坐标系重合，所以绘制出的坐标系紧贴View的上侧和左侧； <br/>
+第二次首先将坐标轴向右下角平移了一段距离，然后绘制出的坐标系也就整体向右下角平移了；<br/> 
+第三次再次向右下角平移，并旋转了30度，图上倾斜的坐标系即最后的绘图坐标系。<br/>
+
+
 ### canvas方法
 
-我们可以调用canvas画各种图形，我们有时候还有对canvas做一些操作，比如旋转，剪裁，平移等等；有时候为了达到理想的效果，我们可能还需要一些特效。在此，对相关内容做一些介绍。
+我们可以调用canvas画各种图形，我们有时候还有对canvas做一些操作，比如旋转，剪裁，平移等等；有时候为了达到理想的效果，我们可能还需要一些特效。在此，对相关内容做一些介绍。</br>
+Canvas 源代码当中,其中Canva的draw方法基本上都是通过Native方法直接在内存中去操作的.在这里我们详细介绍各个方法的使用</br>
 
 * `canvas.translate`
 * `canvas.rotate`
@@ -387,7 +468,9 @@ private void drawOnBitmap(){
 * `PathEffect`
 
 #### canvas.translate
+
 从字面意思也可以知道它的作用是位移，那么这个位移到底是怎么实现的的呢？我们看段代码：
+
 ``` java
  protected void onDraw(Canvas canvas) {
      super.onDraw(canvas);
@@ -415,9 +498,12 @@ private void drawOnBitmap(){
 ![github](https://github.com/heavenxue/SourceAnalysis/raw/master/pic/3.png "github")
 
 #### canvas.rotate
+
 与translate类似，可以用rotate实现旋转。`canvas.rotate`相当于把坐标系旋转了一定角度。
+
 #### canvas.clipRect
 `canvas.clipRect`表示剪裁操作，执行该操作后的绘制将显示在剪裁区域。<br/>
+
 ``` java
 protected void onDraw(Canvas canvas) {
     super.onDraw(canvas);
@@ -433,16 +519,20 @@ protected void onDraw(Canvas canvas) {
     canvas.drawText("黄色部分为Canvas剪裁后的区域", 10, 310, paint);
     }
 ```
+
 当我们调用了`canvas.clipRect( )`后，如果再继续画图那么所绘的图只会在所剪裁的范围内体现。</br> 
 当然除了按照矩形剪裁以外，还可以有别的剪裁方式，比如：`canvas.clipPath( )`和`canvas.clipRegion( )`。</br>
 
 #### canvas.save和canvas.restore
+
 刚才在说`canvas.clipRect( )`时，有人可能有这样的疑问：在调用`canvas.clipRect( )`后，如果还需要在剪裁范围外绘图该怎么办？</br>
 是不是系统有一个`canvas.restoreClipRect( )`方法呢？去看看官方的API就有点小失望了，我们期待的东西是不存在的；</br>
 不过可以换种方式来实现这个需求，这就是即将要介绍的`canvas.save`和`canvas.restore`。看到这个玩意，</br>
 可能绝大部分人就想起来了Activity中的`onSaveInstanceState`和`onRestoreInstanceState`这两者用来保存</br>
 和还原Activity的某些状态和数据。canvas也可以这样么？</br>  
+
 #### canvas.save
+
 它表示画布的锁定。如果我们把一个妹子锁在屋子里，那么外界的刮风下雨就影响不到她了；</br>  
 同理，如果对一个canvas执行了`save`操作就表示将已经所绘的图形锁定，之后的绘图就不会影响到原来画好的图形。 </br>  
 既然不会影响到原本已经画好的图形，那之后的操作又发生在哪里呢？ </br>  
@@ -451,7 +541,9 @@ protected void onDraw(Canvas canvas) {
 将这个新的图层与底下原本的画好的图像相结合形成一个新的图像。</br>  
 打个比方：原本在画板上画了一个姑娘，我又找了一张和画板一样大小的透明的纸(Layer)，然后在上面画了一朵花，</br>  
 最后我把这个纸盖在了画板上，呈现给世人的效果就是：一个美丽的姑娘手拿一朵鲜花。 </br>  
+
 看一下代码例子：</br>
+
 ``` java
 protected void onDraw(Canvas canvas) {
     super.onDraw(canvas);
@@ -471,6 +563,7 @@ protected void onDraw(Canvas canvas) {
     canvas.drawText("XXOO", 20, 170, paint);
 }
 ```
+
 这个例子由刚才讲`canvas.clipRect( )`稍加修改而来 </br>
 1 执行`canvas.save( )`锁定canvas，请参见代码第8行 </br>
 2 在新的Layer上裁剪和绘图，请参见代码第9-13行 </br>
@@ -483,6 +576,7 @@ protected void onDraw(Canvas canvas) {
 #### PorterDuffXfermode
 
  可以实现圆角图片，代码如下;
+ 
 ``` java 
 /**
  * @param bitmap 原图
@@ -506,6 +600,7 @@ public Bitmap getRoundCornerBitmap(Bitmap bitmap, float pixels) {
     return roundCornerBitmap;
 }
 ```
+
 主要操作如下： 
 1 生成canvas，请参见代码第7-10行 </br>
 注意给canvas设置的Bitmap的大小是和原图的大小一致的</br> 
@@ -547,6 +642,7 @@ public Bitmap getRoundCornerBitmap(Bitmap bitmap, float pixels) {
 #### Bitmap和Matrix
 除了刚才提到的给图片设置圆角之外，在开发中还常有其他涉及到图片的操作，比如图片的旋转，缩放，平移等等，这些操作可以结合`Matrix`来实现。 </br>
 在此举个例子，看看利用`matrix`实现图片的平移和缩放。
+
 ``` java
 private void drawBitmapWithMatrix(Canvas canvas){
     Paint paint = new Paint();
@@ -563,6 +659,7 @@ private void drawBitmapWithMatrix(Canvas canvas){
     canvas.drawBitmap(bitmap, matrix, paint);
 }
 ```   
+
 梳理一下这段代码的主要操作： </br>
 1 画出原图，请参见代码第2-8行</br> 
 2 平移原图，请参见代码第9-10行 </br>
@@ -593,18 +690,23 @@ private void drawBitmapWithMatrix(Canvas canvas){
 `set`在队列的中间位置，`per`执行队头插入，`post`执行队尾插入。</br> 
 当绘制图像时系统会按照队列中从头至尾的顺序依次调用这些方法。 </br>
 请看下面的几个小示例：</br>
+
 ``` java
 Matrix m = new Matrix();
 m.setRotate(45); 
 m.setTranslate(80, 80);
 ```
+
 只有`m.setTranslate(80, 80)`有效，因为`m.setRotate(45)`被清除.
+
 ``` java
 Matrix m = new Matrix();
 m.setTranslate(80, 80);
 m.postRotate(45);
 ```
+
 先执行`m.setTranslate(80, 80)`后执行`m.postRotate(45)`
+
 ``` java
     Matrix m = new Matrix();
     m.setTranslate(80, 80);
@@ -612,6 +714,7 @@ m.postRotate(45);
 ```
 
 先执行`m.preRotate(45)`后执行`m.setTranslate(80, 80)`
+
 ``` java
 Matrix m = new Matrix();
 m.preScale(2f,2f);    
@@ -619,8 +722,10 @@ m.preTranslate(50f, 20f);
 m.postScale(0.2f, 0.5f);    
 m.postTranslate(20f, 20f);  
 ```   
+
 执行顺序： 
 `m.preTranslate(50f, 20f)`–>`m.preScale(2f,2f)`–>`m.postScale(0.2f, 0.5f)`–>`m.postTranslate(20f, 20f)`
+
 ``` java
 Matrix m = new Matrix();
 m.postTranslate(20, 20);   
@@ -646,6 +751,7 @@ m.preTranslate(0.5f, 0.5f);
 * ComposeShader——组合渲染
 
 在开发中调用`paint.setShader(Shader shader)`就可以实现渲染效果，在此以常用的BitmapShader为示例实现圆形图片。</br>
+
 ``` java
 protected void onDraw(Canvas canvas) {
      super.onDraw(canvas);
@@ -659,14 +765,17 @@ protected void onDraw(Canvas canvas) {
      canvas.drawCircle(radius, radius, radius, paint);
 }
 ```
+
 1 生成BitmapShader，请参见代码第7行 </br>
 2 为Paint设置Shader，请参见代码第8行</br> 
 3 画出圆形图片，请参见代码第10行</br>
 
 在这段代码中，可能稍感陌生的就是BitmapShader构造方法。</br>
+
 ``` java
 BitmapShader(Bitmap bitmap, TileMode tileX, TileMode tileY)
 ```
+
 第一个参数： </br>
 bitmap表示在渲染的对象</br> 
 第二个参数： </br>
@@ -696,6 +805,7 @@ PathEffect有如下几个子类：
 * SumPathEffect 两种样式的叠加。先将两种路径效果叠加起来再作用于`Path`
 
 在此以`CornerPathEffect`和`DashPathEffect`为示例：
+
 ``` java
 protected void onDraw(Canvas canvas) {
      super.onDraw(canvas);
@@ -719,6 +829,7 @@ protected void onDraw(Canvas canvas) {
      canvas.drawPath(path, paint);
 }
 ```   
+
 分析一下这段代码中的主要操作： </br>
 1 设置`Path为CornerPathEffect`效果，请参见代码第16行</br> 
 在构建`CornerPathEffect`时传入了`radiu`s，它表示圆角的度数 </br>
